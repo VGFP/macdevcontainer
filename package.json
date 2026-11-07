@@ -2,7 +2,7 @@
   "name": "macdevcontainer",
   "displayName": "macOS Container Dev Containers",
   "description": "Use Apple's native container runtime as a Dev Containers backend in VS Code, with no Docker Desktop.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "vgfp",
   "license": "MIT",
   "repository": {

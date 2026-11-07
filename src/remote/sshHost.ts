@@ -34,6 +34,24 @@ export function parseSshRemoteHost(remoteName: string | undefined): string | und
   return encoded;
 }
 
+/**
+ * Resolve the SSH host for the current window.
+ *
+ * In a local UI extension attached to a remote window, `vscode.env.remoteName`
+ * is only the remote type (`ssh-remote`). The host authority lives in the
+ * workspace folder URI (`vscode-remote://ssh-remote+.../path`).
+ */
+export function resolveSshRemoteHost(
+  remoteName: string | undefined,
+  workspaceUriAuthority: string | undefined,
+): string | undefined {
+  if (workspaceUriAuthority && workspaceUriAuthority.startsWith('ssh-remote+')) {
+    return parseSshRemoteHost(workspaceUriAuthority);
+  }
+  return parseSshRemoteHost(remoteName);
+}
+
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

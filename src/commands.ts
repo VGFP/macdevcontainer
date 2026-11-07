@@ -11,7 +11,7 @@ import { parseDevContainer } from './devcontainer/parse';
 import type { DevContainerConfig } from './devcontainer/types';
 import { OutputLogger } from './log';
 import { startSshTunnel, stopSshTunnel } from './remote/tunnel';
-import { parseSshRemoteHost } from './remote/sshHost';
+import { resolveSshRemoteHost } from './remote/sshHost';
 import {
   defaultSshConfigPath,
   removeManagedSshBlock,
@@ -340,16 +340,22 @@ class CommandController {
 
     const sshConfigFile = resolveSshConfigFile();
     const remoteName = vscode.env.remoteName;
+    const remoteAuthority =
+      folder.uri.scheme === 'vscode-remote' ? folder.uri.authority : undefined;
+    const isRemote = Boolean(remoteName) || folder.uri.scheme === 'vscode-remote';
 
-    if (remoteName) {
-      const sshHost = parseSshRemoteHost(remoteName);
+    if (isRemote) {
+      const sshHost = resolveSshRemoteHost(remoteName, remoteAuthority);
       if (!sshHost) {
         throw new UserError(
           'Only Remote-SSH workspaces are supported for remote development.',
-          `Current remote: ${remoteName}`,
+          `Current remote: ${remoteName ?? 'unknown'}; workspace authority: ${remoteAuthority ?? 'unknown'}`,
         );
       }
 
+      this.logger.info(
+        `Remote workspace detected. SSH host: ${sshHost}; SSH config: ${sshConfigFile}; authority: ${remoteAuthority ?? 'n/a'}.`,
+      );
       const executor = new SshExecutor({
         sshHost,
         sshConfigFile,

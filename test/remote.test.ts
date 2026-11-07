@@ -4,7 +4,7 @@ import {
   quoteShellArg,
   withRemotePath,
 } from '../src/container/executor';
-import { parseSshRemoteHost } from '../src/remote/sshHost';
+import { parseSshRemoteHost, resolveSshRemoteHost } from '../src/remote/sshHost';
 import { isProtectedPosixWorkspacePath } from '../src/workspace';
 
 describe('parseSshRemoteHost', () => {
@@ -34,6 +34,28 @@ describe('parseSshRemoteHost', () => {
   it('falls back to the raw authority when hex is not JSON', () => {
     const encoded = Buffer.from('not json', 'utf8').toString('hex');
     expect(parseSshRemoteHost(`ssh-remote+${encoded}`)).toBe(encoded);
+  });
+});
+
+describe('resolveSshRemoteHost', () => {
+  it('uses the workspace URI authority for local UI extensions', () => {
+    const encoded = Buffer.from(
+      JSON.stringify({ hostName: 'Mac_Mini_M4' }),
+      'utf8',
+    ).toString('hex');
+    expect(
+      resolveSshRemoteHost('ssh-remote', `ssh-remote+${encoded}`),
+    ).toBe('Mac_Mini_M4');
+  });
+
+  it('falls back to a full remoteName authority', () => {
+    expect(resolveSshRemoteHost('ssh-remote+Mac_Mini_M4', undefined)).toBe(
+      'Mac_Mini_M4',
+    );
+  });
+
+  it('returns undefined for non-SSH remotes', () => {
+    expect(resolveSshRemoteHost('wsl', 'wsl+Ubuntu')).toBeUndefined();
   });
 });
 
