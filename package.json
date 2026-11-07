@@ -1,0 +1,95 @@
+{
+  "name": "macdevcontainer",
+  "displayName": "macOS Container Dev Containers",
+  "description": "Use Apple's native container runtime as a Dev Containers backend in VS Code, with no Docker Desktop.",
+  "version": "0.0.1",
+  "publisher": "vgfp",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VGFP/macdevcontainer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/VGFP/macdevcontainer/issues"
+  },
+  "homepage": "https://github.com/VGFP/macdevcontainer#readme",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "devcontainer",
+    "dev container",
+    "apple container",
+    "macos",
+    "remote-ssh",
+    "containers"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "macdevcontainer.reopenInContainer",
+        "category": "macOS Container",
+        "title": "Reopen Folder in Container"
+      },
+      {
+        "command": "macdevcontainer.rebuildContainer",
+        "category": "macOS Container",
+        "title": "Rebuild Container"
+      },
+      {
+        "command": "macdevcontainer.removeContainer",
+        "category": "macOS Container",
+        "title": "Remove Container"
+      },
+      {
+        "command": "macdevcontainer.showLog",
+        "category": "macOS Container",
+        "title": "Show Log"
+      }
+    ],
+    "configuration": {
+      "title": "macdevcontainer",
+      "properties": {
+        "macdevcontainer.containerPath": {
+          "type": "string",
+          "default": "container",
+          "description": "Path to the Apple container CLI executable."
+        },
+        "macdevcontainer.autoStartService": {
+          "type": "boolean",
+          "default": true,
+          "description": "Start the Apple container service automatically when it is not running."
+        },
+        "macdevcontainer.openInNewWindow": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the container workspace in a new VS Code window."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "node esbuild.mjs",
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/vscode": "1.95.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  },
+  "packageManager": "pnpm@12.18.0"
+}
