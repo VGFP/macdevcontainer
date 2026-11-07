@@ -1,8 +1,8 @@
-import { connect } from 'node:net';
 import { UserError, outputTail } from '../util/errors';
 import { type Logger, silentLogger } from '../util/logger';
-import { delay, run, type RunOptions, type RunResult } from '../util/process';
+import { delay, type RunOptions, type RunResult } from '../util/process';
 import { buildExecArgs, type ExecOptions } from './args';
+import { LocalExecutor, type CommandExecutor } from './executor';
 
 export interface ContainerInfo {
   id: string;
@@ -13,16 +13,19 @@ export interface ContainerInfo {
 export interface ContainerCliOptions {
   containerPath?: string;
   logger?: Logger;
+  executor?: CommandExecutor;
 }
 
 /** Thin, testable wrapper around the Apple `container` CLI. */
 export class ContainerCli {
   private readonly cliPath: string;
   private readonly logger: Logger;
+  private readonly executor: CommandExecutor;
 
   constructor(options: ContainerCliOptions = {}) {
     this.cliPath = options.containerPath?.trim() || 'container';
     this.logger = options.logger ?? silentLogger;
+    this.executor = options.executor ?? new LocalExecutor();
   }
 
   get path(): string {
@@ -30,8 +33,9 @@ export class ContainerCli {
   }
 
   async run(args: string[], options: RunOptions = {}): Promise<RunResult> {
-    this.logger.info(`$ ${this.cliPath} ${args.join(' ')}`);
-    return run(this.cliPath, args, {
+    const prefix = this.executor.label ? `${this.executor.label} ` : '';
+    this.logger.info(`$ ${prefix}${this.cliPath} ${args.join(' ')}`);
+    return this.executor.run(this.cliPath, args, {
       timeoutMs: 5 * 60 * 1000,
       ...options,
     });
@@ -221,54 +225,6 @@ export class ContainerCli {
       last ? `Last observed state: ${last.state}` : 'The container could not be inspected.',
     );
   }
-}
-
-/** Wait until a TCP port inside the container is reachable from the host. */
-export function waitForTcp(host: string, port: number, timeoutMs = 30_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-
-  return new Promise<void>((resolve, reject) => {
-    let settled = false;
-
-    const attempt = (): void => {
-      if (settled) {
-        return;
-      }
-
-      const socket = connect({ host, port });
-
-      const finish = (error?: Error): void => {
-        socket.removeAllListeners();
-        socket.destroy();
-        if (settled) {
-          return;
-        }
-        if (!error) {
-          settled = true;
-          resolve();
-          return;
-        }
-        if (Date.now() >= deadline) {
-          settled = true;
-          reject(
-            new UserError(
-              `Port ${port} on ${host} did not become reachable.`,
-              error.message,
-            ),
-          );
-          return;
-        }
-        setTimeout(attempt, 500).unref();
-      };
-
-      socket.setTimeout(2000);
-      socket.once('connect', () => finish());
-      socket.once('timeout', () => finish(new Error('Connection timed out.')));
-      socket.once('error', (error) => finish(error));
-    };
-
-    attempt();
-  });
 }
 
 function toContainerInfo(value: unknown): ContainerInfo | undefined {

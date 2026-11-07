@@ -1,12 +1,17 @@
-import { readFile, realpath } from 'node:fs/promises';
+import { realpath } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { isAbsolute, join } from 'node:path';
 import * as vscode from 'vscode';
 import { buildCreateArgs, lifecycleSteps } from './container/args';
-import { ContainerCli, waitForTcp } from './container/cli';
+import { ContainerCli } from './container/cli';
+import { LocalExecutor, SshExecutor, quoteShellArg, type CommandExecutor } from './container/executor';
 import { containerNameForWorkspace, projectId } from './container/naming';
 import { ensureSshd, installAuthorizedKey } from './container/ssh';
 import { parseDevContainer } from './devcontainer/parse';
 import type { DevContainerConfig } from './devcontainer/types';
 import { OutputLogger } from './log';
+import { startSshTunnel, stopSshTunnel } from './remote/tunnel';
+import { parseSshRemoteHost } from './remote/sshHost';
 import {
   defaultSshConfigPath,
   removeManagedSshBlock,
@@ -14,9 +19,11 @@ import {
 } from './ssh/config';
 import { ensureKeyPair } from './ssh/keys';
 import { verifySsh } from './ssh/verify';
-import { CancelledError, errorMessage, UserError } from './util/errors';
+import { CancelledError, errorMessage, outputTail, UserError } from './util/errors';
 import { readTextFileIfExists, writePrivateFile } from './util/fs';
-import { findDevContainerFiles, isProtectedWorkspacePath } from './workspace';
+import { waitForTcp } from './util/net';
+import { isProtectedPosixWorkspacePath, isProtectedWorkspacePath } from './workspace';
+import { findDevContainerUris, readWorkspaceText, uriLabel } from './workspaceFiles';
 
 const REMOTE_SSH_EXTENSION = 'ms-vscode-remote.remote-ssh';
 
@@ -40,6 +47,16 @@ export function registerCommands(
   );
 }
 
+interface RunContext {
+  workspaceRoot: string;
+  workspaceUri: vscode.Uri;
+  isRemote: boolean;
+  sshHost?: string;
+  sshConfigFile: string;
+  executor: CommandExecutor;
+  home: string;
+}
+
 class CommandController {
   private readonly logger: OutputLogger;
 
@@ -51,14 +68,14 @@ class CommandController {
     await this.runWithUi(
       rebuild ? 'Rebuilding container' : 'Opening folder in container',
       async (progress) => {
-        const workspaceRoot = await this.getWorkspaceRoot();
-        this.assertWorkspaceIsMountable(workspaceRoot);
+        const context = await this.getRunContext();
+        this.assertWorkspaceIsMountable(context);
 
-        const devContainerFile = await this.pickDevContainerFile(workspaceRoot);
+        const devContainerUri = await this.pickDevContainerFile(context.workspaceUri);
         const parsed = parseDevContainer(
-          await readFile(devContainerFile, 'utf8'),
-          devContainerFile,
-          workspaceRoot,
+          await readWorkspaceText(devContainerUri),
+          uriLabel(devContainerUri),
+          context.workspaceRoot,
         );
         for (const warning of parsed.warnings) {
           this.logger.warn(warning);
@@ -71,16 +88,18 @@ class CommandController {
         const settings = vscode.workspace.getConfiguration('macdevcontainer');
         const cli = new ContainerCli({
           containerPath: settings.get<string>('containerPath', 'container'),
+          executor: context.executor,
           logger: this.logger,
         });
         const autoStart = settings.get<boolean>('autoStartService', true);
-        const containerName = containerNameForWorkspace(workspaceRoot);
-        const identifier = projectId(workspaceRoot);
+        const containerName = containerNameForWorkspace(context.workspaceRoot);
+        const identifier = projectId(context.workspaceRoot);
 
         progress.report({ message: 'Checking the Apple container service…' });
         await cli.ensureService(autoStart);
 
         if (rebuild) {
+          await stopSshTunnel(identifier);
           const existing = await cli.inspect(containerName);
           if (existing) {
             progress.report({ message: `Removing container ${containerName}…` });
@@ -101,7 +120,7 @@ class CommandController {
           await cli.create(
             buildCreateArgs({
               containerName,
-              workspaceRoot,
+              workspaceRoot: context.workspaceRoot,
               image: config.image,
               config,
             }),
@@ -140,6 +159,10 @@ class CommandController {
         }
 
         const running = info ?? (await cli.waitForRunning(containerName));
+        const address = running.ipv4Address;
+        if (!address) {
+          throw new UserError('The container did not report an IPv4 address.');
+        }
 
         progress.report({ message: 'Configuring SSH…' });
         await ensureSshd(cli, containerName, this.logger);
@@ -152,27 +175,42 @@ class CommandController {
           identifier,
         );
 
-        const address = running.ipv4Address;
-        if (!address) {
-          throw new UserError('The container did not report an IPv4 address.');
+        let hostName = address;
+        let port: number | undefined;
+
+        if (context.isRemote) {
+          if (!context.sshHost) {
+            throw new UserError('Could not determine the Remote-SSH host.');
+          }
+          progress.report({ message: 'Opening an SSH tunnel through the remote host…' });
+          const tunnel = await startSshTunnel({
+            projectId: identifier,
+            sshHost: context.sshHost,
+            sshConfigFile: context.sshConfigFile,
+            containerIp: address,
+            logger: this.logger,
+          });
+          hostName = '127.0.0.1';
+          port = tunnel.port;
         }
 
-        const sshConfigFile = defaultSshConfigPath();
-        const existingConfig = (await readTextFileIfExists(sshConfigFile)) ?? '';
+        const identityFile = key.privateKeyPath.replace(/\\/g, '/');
+        const existingConfig = (await readTextFileIfExists(context.sshConfigFile)) ?? '';
         await writePrivateFile(
-          sshConfigFile,
+          context.sshConfigFile,
           upsertManagedSshBlock(existingConfig, {
             host: containerName,
-            hostName: address,
+            hostName,
+            port,
             user: config.remoteUser,
-            identityFile: key.privateKeyPath,
+            identityFile,
             forwardPorts: config.forwardPorts,
           }),
         );
 
         progress.report({ message: 'Verifying the SSH connection…' });
-        await waitForTcp(address, 22, 30_000);
-        await verifySsh(containerName, sshConfigFile);
+        await waitForTcp(hostName, port ?? 22, context.isRemote ? 20_000 : 30_000);
+        await verifySsh(containerName, context.sshConfigFile);
 
         await this.ensureRemoteSshExtension();
         progress.report({ message: 'Opening the VS Code window…' });
@@ -196,13 +234,15 @@ class CommandController {
 
   async remove(): Promise<void> {
     await this.runWithUi('Removing container', async (progress) => {
-      const workspaceRoot = await this.getWorkspaceRoot();
+      const context = await this.getRunContext();
       const settings = vscode.workspace.getConfiguration('macdevcontainer');
       const cli = new ContainerCli({
         containerPath: settings.get<string>('containerPath', 'container'),
+        executor: context.executor,
         logger: this.logger,
       });
-      const containerName = containerNameForWorkspace(workspaceRoot);
+      const containerName = containerNameForWorkspace(context.workspaceRoot);
+      const identifier = projectId(context.workspaceRoot);
       const info = await cli.inspect(containerName);
 
       if (!info) {
@@ -222,8 +262,9 @@ class CommandController {
       }
 
       progress.report({ message: `Removing container ${containerName}…` });
+      await stopSshTunnel(identifier);
       await cli.delete(containerName);
-      await this.removeSshConfig(containerName);
+      await this.removeSshConfig(context.sshConfigFile, containerName);
       void vscode.window.showInformationMessage(`Removed container "${containerName}".`);
     });
   }
@@ -283,13 +324,7 @@ class CommandController {
     }
   }
 
-  private async getWorkspaceRoot(): Promise<string> {
-    if (vscode.env.remoteName) {
-      throw new UserError(
-        'Run this command from a local VS Code window, not from inside a remote session.',
-      );
-    }
-
+  private async getRunContext(): Promise<RunContext> {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
       throw new UserError('Open a folder before using macdevcontainer.');
@@ -299,23 +334,68 @@ class CommandController {
     }
 
     const folder = folders[0];
-    if (!folder || folder.uri.scheme !== 'file') {
-      throw new UserError('macdevcontainer requires a local folder.');
+    if (!folder) {
+      throw new UserError('No workspace folder is open.');
     }
-    return realpath(folder.uri.fsPath);
+
+    const sshConfigFile = resolveSshConfigFile();
+    const remoteName = vscode.env.remoteName;
+
+    if (remoteName) {
+      const sshHost = parseSshRemoteHost(remoteName);
+      if (!sshHost) {
+        throw new UserError(
+          'Only Remote-SSH workspaces are supported for remote development.',
+          `Current remote: ${remoteName}`,
+        );
+      }
+
+      const executor = new SshExecutor({
+        sshHost,
+        sshConfigFile,
+      });
+      const workspaceRoot = await resolveRemotePath(executor, folder.uri.path);
+      const home = await readRemoteHome(executor);
+
+      return {
+        workspaceRoot,
+        workspaceUri: folder.uri,
+        isRemote: true,
+        sshHost,
+        sshConfigFile,
+        executor,
+        home,
+      };
+    }
+
+    if (folder.uri.scheme !== 'file') {
+      throw new UserError(`Unsupported workspace URI: ${folder.uri.toString()}`);
+    }
+
+    return {
+      workspaceRoot: await realpath(folder.uri.fsPath),
+      workspaceUri: folder.uri,
+      isRemote: false,
+      sshConfigFile,
+      executor: new LocalExecutor(),
+      home: homedir(),
+    };
   }
 
-  private assertWorkspaceIsMountable(workspaceRoot: string): void {
-    if (isProtectedWorkspacePath(workspaceRoot)) {
+  private assertWorkspaceIsMountable(context: RunContext): void {
+    const protectedPath = context.isRemote
+      ? isProtectedPosixWorkspacePath(context.workspaceRoot, context.home)
+      : isProtectedWorkspacePath(context.workspaceRoot, context.home);
+    if (protectedPath) {
       throw new UserError(
         'This folder is protected by macOS privacy and cannot be mounted by Apple container.',
-        'Move the project to a normal folder such as ~/Projects (not Desktop, Documents, or Downloads).',
+        `Move the project to a normal folder such as ${context.home}/Projects (not Desktop, Documents, or Downloads).`,
       );
     }
   }
 
-  private async pickDevContainerFile(workspaceRoot: string): Promise<string> {
-    const files = await findDevContainerFiles(workspaceRoot);
+  private async pickDevContainerFile(root: vscode.Uri): Promise<vscode.Uri> {
+    const files = await findDevContainerUris(root);
     if (files.length === 0) {
       throw new UserError(
         'No devcontainer configuration found.',
@@ -329,14 +409,14 @@ class CommandController {
     const picked = await vscode.window.showQuickPick(
       files.map((file) => ({
         label: vscode.workspace.asRelativePath(file),
-        file,
+        uri: file,
       })),
       { placeHolder: 'Select a devcontainer configuration' },
     );
     if (!picked) {
       throw new CancelledError();
     }
-    return picked.file;
+    return picked.uri;
   }
 
   private async ensureRemoteSshExtension(): Promise<void> {
@@ -360,12 +440,55 @@ class CommandController {
     );
   }
 
-  private async removeSshConfig(containerName: string): Promise<void> {
-    const sshConfigFile = defaultSshConfigPath();
+  private async removeSshConfig(sshConfigFile: string, containerName: string): Promise<void> {
     const existing = await readTextFileIfExists(sshConfigFile);
     if (existing === undefined) {
       return;
     }
     await writePrivateFile(sshConfigFile, removeManagedSshBlock(existing, containerName));
   }
+}
+
+function resolveSshConfigFile(): string {
+  const configured = vscode.workspace
+    .getConfiguration('remote.SSH')
+    .get<string>('configFile');
+  if (!configured || configured.trim().length === 0) {
+    return defaultSshConfigPath();
+  }
+
+  const value = configured.trim();
+  if (value === '~') {
+    return homedir();
+  }
+  if (value.startsWith('~/')) {
+    return join(homedir(), value.slice(2));
+  }
+  return isAbsolute(value) ? value : join(homedir(), value);
+}
+
+async function resolveRemotePath(executor: SshExecutor, path: string): Promise<string> {
+  const result = await executor.runShell(`cd -- ${quoteShellArg(path)} && pwd -P`, {
+    timeoutMs: 30_000,
+  });
+  const resolved = result.stdout.trim();
+  if (result.code !== 0 || resolved.length === 0) {
+    throw new UserError(
+      'Could not access the workspace folder on the remote host.',
+      outputTail(result.stderr || result.stdout),
+    );
+  }
+  return resolved;
+}
+
+async function readRemoteHome(executor: SshExecutor): Promise<string> {
+  const result = await executor.runShell('printf %s "$HOME"', { timeoutMs: 30_000 });
+  const home = result.stdout.trim();
+  if (result.code !== 0 || home.length === 0) {
+    throw new UserError(
+      'Could not determine the remote home directory.',
+      outputTail(result.stderr || result.stdout),
+    );
+  }
+  return home;
 }

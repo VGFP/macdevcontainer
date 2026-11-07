@@ -31,12 +31,23 @@ Microsoft's **Dev Containers** extension, however, only talks to a Docker- or Po
 2. Build the image with `container build`, or pull it with `container image pull`.
 3. Create and start a container with the workspace bind-mounted.
 4. Inject a per-project SSH key and ensure `sshd` is running inside the container (installing `openssh-server` automatically if needed).
-5. Open a new VS Code window using Remote - SSH, connecting to the container's **direct IP** (`192.168.64.x`) rather than a published host port.
+5. Open a new VS Code window using Remote - SSH, connecting to the container rather than a published host port.
 6. Forward `forwardPorts` through the SSH connection.
 
 Using the container IP sidesteps the broken `container run -p` path on macOS 27.
 
 The extension keeps a marked block in `~/.ssh/config` for each container (including `LocalForward` entries for `forwardPorts`). Other SSH entries are left untouched.
+
+### Remote workspaces (Remote - SSH)
+
+The extension is a **UI extension** (`extensionKind: ["ui"]`), like Microsoft's Dev Containers extension. When the current window is a Remote-SSH workspace:
+
+- all `container` commands and container lifecycle hooks execute on the Remote-SSH host through your existing SSH connection;
+- the extension opens a local SSH tunnel from your machine to the container through that host;
+- the container's SSH config, key, and forwarding entries are written on your local machine;
+- Remote-SSH opens the container from the local side.
+
+No extension installation is required on the remote host. Both `ssh` and `ssh-keygen` must be available locally; Remote - SSH already requires them.
 
 ---
 
@@ -56,7 +67,7 @@ The extension keeps a marked block in `~/.ssh/config` for each container (includ
 
 The extension is not published yet.
 
-Building from a checkout requires Node.js 20+ and pnpm.
+Building from a checkout requires Node.js 20+ and pnpm. Install the resulting VSIX in your **local** VS Code window. For a remote workspace, the extension runs locally and connects to the Mac through the existing Remote - SSH host.
 
 ```bash
 # from a checkout
@@ -138,7 +149,7 @@ Unsupported keys are ignored with a warning.
 These are properties of the current Apple `container` runtime and macOS, not of this extension:
 
 - **Published ports (`-p`) do not work.** On macOS 27 they accept connections and then reset (`EHOSTUNREACH` from the forwarder). Use the container's direct IP or an SSH tunnel.
-- **Protected folders cannot be mounted.** Paths under `~/Desktop`, `~/Documents` and `~/Downloads` hang the container during share setup because macOS privacy blocks `open()`. Keep projects in a normal directory such as `~/Projects`.
+- **Protected folders cannot be mounted.** Paths under `~/Desktop`, `~/Documents` and `~/Downloads` hang the container during share setup because macOS privacy blocks `open()`. Keep projects in a normal directory such as `~/Projects`. This applies to the remote host too: a Remote-SSH workspace under the remote user's `~/Desktop` cannot be mounted.
 - **One VM per container.** Expect roughly 300–400 MB of host memory per running container before the workload does anything. Defaults are 1 GiB RAM and 4 vCPUs; tune them with `-m` and `-c` / `hostRequirements`.
 - **No Docker API.** `docker compose`, `buildx` and Docker-specific tooling are out of scope.
 - **Daemon recovery.** A failed mount can wedge the service; it may need `kill -9` on the container helpers.

@@ -1,6 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join, sep } from 'node:path';
+import { join, posix, sep } from 'node:path';
 import { fileExists } from './util/fs';
 
 /**
@@ -51,5 +51,13 @@ export function isProtectedWorkspacePath(workspaceRoot: string, home = homedir()
   return ['Desktop', 'Documents', 'Downloads'].some((name) => {
     const directory = join(home, name);
     return workspaceRoot === directory || workspaceRoot.startsWith(directory + sep);
+  });
+}
+
+/** POSIX variant for paths on a remote Mac. */
+export function isProtectedPosixWorkspacePath(workspaceRoot: string, home: string): boolean {
+  return ['Desktop', 'Documents', 'Downloads'].some((name) => {
+    const directory = posix.join(home, name);
+    return workspaceRoot === directory || workspaceRoot.startsWith(`${directory}/`);
   });
 }

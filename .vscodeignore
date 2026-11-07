@@ -12,3 +12,4 @@ esbuild.mjs
 pnpm-lock.yaml
 pnpm-workspace.yaml
 .gitignore
+*.vsix

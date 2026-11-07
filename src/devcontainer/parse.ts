@@ -1,4 +1,4 @@
-import { basename } from 'node:path';
+import { posix } from 'node:path';
 import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
 import { UserError } from '../util/errors';
 import type {
@@ -61,7 +61,7 @@ export function parseDevContainer(
   const remoteUser = optionalString(data.remoteUser, 'remoteUser', filePath) ?? 'root';
   const workspaceFolder = normalizeContainerPath(
     optionalString(data.workspaceFolder, 'workspaceFolder', filePath) ??
-      `/workspaces/${basename(workspaceRoot) || 'workspace'}`,
+      `/workspaces/${posix.basename(workspaceRoot) || 'workspace'}`,
     'workspaceFolder',
     filePath,
   );

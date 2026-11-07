@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { basename } from 'node:path';
+import { basename, posix } from 'node:path';
 
 /** Stable identifier for a workspace, used for container names and SSH keys. */
 export function projectId(workspaceRoot: string): string {
@@ -16,6 +16,6 @@ export function sanitizeName(value: string): string {
 
 /** Deterministic container name for a workspace. */
 export function containerNameForWorkspace(workspaceRoot: string): string {
-  const base = sanitizeName(basename(workspaceRoot)).slice(0, 24).replace(/[-_.]+$/, '');
+  const base = sanitizeName(posix.basename(workspaceRoot)).slice(0, 24).replace(/[-_.]+$/, '');
   return `macdc-${base || 'workspace'}-${projectId(workspaceRoot).slice(0, 10)}`;
 }

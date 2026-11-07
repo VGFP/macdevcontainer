@@ -29,6 +29,12 @@ describe('ssh config', () => {
     expect(block).toContain('LocalForward 3000 127.0.0.1:3000');
   });
 
+  it('includes the tunnel port when one is given', () => {
+    const block = buildManagedSshBlock({ ...entry, port: 43210 });
+    expect(block).toContain('HostName 192.168.64.5');
+    expect(block).toContain('Port 43210');
+  });
+
   it('quotes identity paths containing spaces', () => {
     const block = buildManagedSshBlock({
       ...entry,

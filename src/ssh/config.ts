@@ -9,6 +9,7 @@ export interface ForwardPort {
 export interface SshHostEntry {
   host: string;
   hostName: string;
+  port?: number;
   user: string;
   identityFile: string;
   forwardPorts?: readonly (number | string)[];
@@ -60,6 +61,7 @@ export function buildManagedSshBlock(entry: SshHostEntry): string {
     `Host ${entry.host}`,
     `    HostName ${entry.hostName}`,
     `    User ${entry.user}`,
+    ...(entry.port === undefined ? [] : [`    Port ${entry.port}`]),
     `    IdentityFile ${quoteSshValue(entry.identityFile)}`,
     '    IdentitiesOnly yes',
     '    StrictHostKeyChecking no',
