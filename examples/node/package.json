@@ -1,0 +1,9 @@
+{
+  "name": "macdevcontainer-example",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Small Node.js app used to exercise macdevcontainer end to end.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

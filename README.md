@@ -83,6 +83,13 @@ Available commands:
 | **macOS Container: Remove Container** | Remove the container and its managed SSH config block |
 | **macOS Container: Show Log** | Open the extension output channel |
 
+### End-to-end example
+
+The [`examples/node`](examples/node) folder is a small test project with a
+`devcontainer.json`, an SSH server bootstrap, and a Node.js server on port 3000.
+See its [README](examples/node/README.md) for the exact steps to run it in the
+Extension Development Host.
+
 ### Example `devcontainer.json`
 
 ```jsonc

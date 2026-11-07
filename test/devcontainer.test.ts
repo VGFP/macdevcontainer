@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseDevContainer } from '../src/devcontainer/parse';
 
@@ -123,5 +125,21 @@ describe('parseDevContainer', () => {
 
   it('reports malformed JSON with a location', () => {
     expect(() => parseDevContainer('{"image": }', file, workspace)).toThrow(/Cannot parse/);
+  });
+
+  it('parses the bundled end-to-end example', async () => {
+    const exampleRoot = join(process.cwd(), 'examples', 'node');
+    const exampleFile = join(exampleRoot, '.devcontainer', 'devcontainer.json');
+    const parsed = parseDevContainer(
+      await readFile(exampleFile, 'utf8'),
+      exampleFile,
+      exampleRoot,
+    );
+
+    expect(parsed.warnings).toEqual([]);
+    expect(parsed.config.image).toContain('typescript-node');
+    expect(parsed.config.workspaceFolder).toBe('/workspaces/example');
+    expect(parsed.config.forwardPorts).toEqual([3000]);
+    expect(parsed.config.hostRequirements).toEqual({ cpus: 2, memory: '2GB' });
   });
 });
