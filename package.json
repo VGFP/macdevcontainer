@@ -82,7 +82,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "pnpm typecheck && pnpm test && pnpm build"
+    "verify-bundle": "node scripts/verify-bundle.mjs",
+    "check": "pnpm typecheck && pnpm test && pnpm build && pnpm verify-bundle"
   },
   "dependencies": {
     "jsonc-parser": "^3.3.1"

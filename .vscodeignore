@@ -1,6 +1,7 @@
 .vscode/**
 .github/**
 examples/**
+scripts/**
 src/**
 test/**
 out/**

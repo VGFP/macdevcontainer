@@ -191,7 +191,7 @@ pnpm watch      # rebuild on change
 
 pnpm typecheck  # TypeScript only
 pnpm test       # unit tests
-pnpm check      # typecheck + tests + production bundle
+pnpm check      # typecheck + tests + bundle + bundle activation check
 ```
 
 Press **F5** in VS Code to launch the Extension Development Host, then run a command from the palette. CI runs the same checks on every push and pull request.

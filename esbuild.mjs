@@ -10,6 +10,7 @@ const options = {
   format: 'cjs',
   target: 'node20',
   external: ['vscode'],
+  mainFields: ['module', 'main'],
   outfile: 'dist/extension.js',
   sourcemap: true,
   minify: process.env.NODE_ENV === 'production',
