@@ -30,7 +30,7 @@ Microsoft's **Dev Containers** extension, however, only talks to a Docker- or Po
 1. Read `.devcontainer/devcontainer.json` (a supported subset — see [Configuration](#configuration)).
 2. Build the image with `container build`, or pull it with `container image pull`.
 3. Create and start a container with the workspace bind-mounted.
-4. Inject a per-project SSH key and ensure `sshd` is running inside the container.
+4. Inject a per-project SSH key and ensure `sshd` is running inside the container (installing `openssh-server` automatically if needed).
 5. Open a new VS Code window using Remote - SSH, connecting to the container's **direct IP** (`192.168.64.x`) rather than a published host port.
 6. Forward `forwardPorts` through the SSH connection.
 
@@ -48,7 +48,7 @@ The extension keeps a marked block in `~/.ssh/config` for each container (includ
 | Apple `container` CLI | 1.7.1+ (`container --version`) |
 | VS Code | 1.95+ |
 | VS Code extension | **Remote - SSH** (`ms-vscode-remote.remote-ssh`) |
-| `sshd` in the image | installed via `postCreateCommand` if missing |
+| `sshd` in the image | installed automatically if missing (apt, apk, dnf, yum, pacman), or via `postCreateCommand` |
 
 ---
 
@@ -108,7 +108,7 @@ Extension Development Host.
 }
 ```
 
-> Most stock images do not run an SSH server. Add `openssh-server` through `postCreateCommand` (or use an image that already provides it).
+> Most stock images do not run an SSH server. The extension installs `openssh-server` automatically when it is missing (Debian/Ubuntu, Alpine, Fedora/RHEL, Arch), or you can add it through `postCreateCommand`.
 
 ---
 

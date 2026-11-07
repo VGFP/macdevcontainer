@@ -14,6 +14,27 @@ const LOCATE_SSHD = [
   'fi',
 ].join('\n');
 
+/** Install OpenSSH using whichever package manager the image provides. */
+export const SSHD_INSTALL_SCRIPT = [
+  'set -e',
+  'if command -v apt-get >/dev/null 2>&1; then',
+  '  export DEBIAN_FRONTEND=noninteractive',
+  '  apt-get update',
+  '  apt-get install -y openssh-server',
+  'elif command -v apk >/dev/null 2>&1; then',
+  '  apk add --no-cache openssh',
+  'elif command -v dnf >/dev/null 2>&1; then',
+  '  dnf install -y openssh-server',
+  'elif command -v yum >/dev/null 2>&1; then',
+  '  yum install -y openssh-server',
+  'elif command -v pacman >/dev/null 2>&1; then',
+  '  pacman -Sy --noconfirm openssh',
+  'else',
+  '  echo "No supported package manager found (apt-get, apk, dnf, yum, pacman)." >&2',
+  '  exit 42',
+  'fi',
+].join('\n');
+
 const INSTALL_KEY_SCRIPT = [
   'set -e',
   'u="$1"',
@@ -40,30 +61,41 @@ const INSTALL_KEY_SCRIPT = [
   'chown -R "$u" "$home/.ssh" 2>/dev/null || true',
 ].join('\n');
 
-/** Ensure sshd is present and listening on port 22 inside the container. */
+/** Ensure sshd is present and available on port 22 inside the container. */
 export async function ensureSshd(
   cli: ContainerCli,
   containerName: string,
   logger: Logger,
 ): Promise<void> {
-  const locate = await cli.exec(containerName, ['sh', '-c', LOCATE_SSHD], {
-    user: 'root',
-    timeoutMs: 30_000,
-  });
+  let sshdPath = await locateSshd(cli, containerName);
 
-  if (locate.code !== 0) {
-    throw new UserError(
-      'OpenSSH is not installed in the container.',
-      'Add openssh-server to the image, or install it from postCreateCommand.',
-    );
+  if (!sshdPath) {
+    logger.warn('OpenSSH is not installed in the container. Installing openssh-server...');
+    const installed = await cli.exec(containerName, ['sh', '-c', SSHD_INSTALL_SCRIPT], {
+      user: 'root',
+      timeoutMs: 10 * 60 * 1000,
+    });
+
+    if (installed.code !== 0) {
+      throw new UserError(
+        'OpenSSH is not installed and could not be installed automatically.',
+        [
+          outputTail(installed.stderr || installed.stdout),
+          'Add openssh-server to the image, or install it from postCreateCommand.',
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
+      );
+    }
+
+    sshdPath = await locateSshd(cli, containerName);
+    if (!sshdPath) {
+      throw new UserError(
+        'OpenSSH was installed but the sshd executable could not be found.',
+        'Check the image package layout and ensure /usr/sbin/sshd exists.',
+      );
+    }
   }
-
-  const sshdPath =
-    locate.stdout
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .pop() ?? '/usr/sbin/sshd';
 
   logger.info(`Starting sshd (${sshdPath}) in container ${containerName}...`);
 
@@ -86,6 +118,28 @@ export async function ensureSshd(
       outputTail(started.stderr || started.stdout),
     );
   }
+}
+
+async function locateSshd(
+  cli: ContainerCli,
+  containerName: string,
+): Promise<string | undefined> {
+  const located = await cli.exec(containerName, ['sh', '-c', LOCATE_SSHD], {
+    user: 'root',
+    timeoutMs: 30_000,
+  });
+
+  if (located.code !== 0) {
+    return undefined;
+  }
+
+  return (
+    located.stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .pop() || undefined
+  );
 }
 
 /**
