@@ -65,7 +65,9 @@ export class ContainerCli {
   }
 
   async serviceStatus(): Promise<boolean> {
-    const result = await this.run(['system', 'status'], { timeoutMs: 15_000 });
+    // `container system status` can falsely report "not registered" in a
+    // Background launchd session. Listing containers is the reliable check.
+    const result = await this.run(['ls', '--format', 'json'], { timeoutMs: 15_000 });
     return result.code === 0;
   }
 
