@@ -36,7 +36,7 @@ export function waitForTcp(host: string, port: number, timeoutMs = 30_000): Prom
           );
           return;
         }
-        setTimeout(attempt, 500).unref();
+        setTimeout(attempt, 500);
       };
 
       socket.setTimeout(2000);
@@ -76,7 +76,6 @@ export function canConnect(host: string, port: number, timeoutMs = 1000): Promis
 export function getFreePort(host = '127.0.0.1'): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     const server = createServer();
-    server.unref();
     server.once('error', reject);
     server.listen(0, host, () => {
       const address = server.address();
