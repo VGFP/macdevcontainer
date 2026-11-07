@@ -177,11 +177,13 @@ class CommandController {
         await this.ensureRemoteSshExtension();
         progress.report({ message: 'Opening the VS Code window…' });
 
-        const uri = vscode.Uri.from({
-          scheme: 'vscode-remote',
-          authority: `ssh-remote+${containerName}`,
-          path: config.workspaceFolder,
-        });
+        const encodedPath = config.workspaceFolder
+          .split('/')
+          .map(encodeURIComponent)
+          .join('/');
+        const uri = vscode.Uri.parse(
+          `vscode-remote://ssh-remote+${containerName}${encodedPath}`,
+        );
         const openInNewWindow = settings.get<boolean>('openInNewWindow', true);
         await vscode.commands.executeCommand(
           'vscode.openFolder',
