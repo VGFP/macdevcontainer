@@ -83,6 +83,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify-bundle": "node scripts/verify-bundle.mjs",
+    "package": "vsce package --no-dependencies --out macdevcontainer.vsix",
     "check": "pnpm typecheck && pnpm test && pnpm build && pnpm verify-bundle"
   },
   "dependencies": {
@@ -91,6 +92,7 @@
   "devDependencies": {
     "@types/node": "^22.20.5",
     "@types/vscode": "1.95.0",
+    "@vscode/vsce": "^4.1.0",
     "esbuild": "^0.28.2",
     "typescript": "^5.9.3",
     "vitest": "^4.1.12"
