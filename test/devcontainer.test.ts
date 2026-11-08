@@ -146,6 +146,46 @@ describe('parseDevContainer', () => {
     expect(() =>
       parseDevContainer('{"image":"node:22","workspaceFolder":"/a/../b"}', file, workspace),
     ).toThrow(/".." segments/);
+
+    expect(() =>
+      parseDevContainer('{"image":"node:22","workspaceFolder":"/a,b"}', file, workspace),
+    ).toThrow(/commas/);
+  });
+
+  it('rejects a remoteUser that could escape shell scripts or the SSH config', () => {
+    const payloads = [
+      'root\\n    ProxyCommand /bin/sh -c evil',
+      'root #comment',
+      'root;ls',
+      '-flag',
+      '1numeric',
+    ];
+    for (const remoteUser of payloads) {
+      expect(() =>
+        parseDevContainer(`{"image":"node:22","remoteUser":"${remoteUser}"}`, file, workspace),
+      ).toThrow(/remoteUser/);
+    }
+  });
+
+  it('accepts conventional remote users', () => {
+    for (const remoteUser of ['root', 'vscode', 'node-user_1', 'o.brien']) {
+      const { config } = parseDevContainer(
+        `{"image":"node:22","remoteUser":"${remoteUser}"}`,
+        file,
+        workspace,
+      );
+      expect(config.remoteUser).toBe(remoteUser);
+    }
+  });
+
+  it('rejects image references that could be parsed as CLI flags', () => {
+    expect(() => parseDevContainer('{"image":"--privileged"}', file, workspace)).toThrow(
+      /image/,
+    );
+    expect(() => parseDevContainer('{"image":"-"}', file, workspace)).toThrow(/image/);
+    expect(() =>
+      parseDevContainer('{"image":"docker.io/library/ubuntu:24.04"}', file, workspace),
+    ).not.toThrow();
   });
 
   it('reports malformed JSON with a location', () => {

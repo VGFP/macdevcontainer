@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildInstallKeyScript,
+  readHostKey,
   SSHD_INSTALL_SCRIPT,
   unlockAccount,
   type CommandTarget,
 } from '../src/container/ssh';
+
+const hostKey = `ssh-ed25519 ${'A'.repeat(68)} root@container`;
+
+function fakeTarget(
+  script: (value: string) => { stdout: string; stderr: string; code: number },
+): CommandTarget {
+  return {
+    label: 'test',
+    shell: async (value) => ({ signal: null, ...script(value) }),
+  };
+}
 
 describe('sshd install script', () => {
   it('supports the common package managers', () => {
@@ -55,5 +67,27 @@ describe('unlockAccount', () => {
     expect(script).toContain(`u='o'\\''brien'`);
     expect(script).toContain('/etc/shadow');
     expect(script).toContain('$2 = "x"');
+  });
+});
+
+describe('readHostKey', () => {
+  it('returns the host key read from the target', async () => {
+    const target = fakeTarget(() => ({ stdout: `${hostKey}\n`, stderr: '', code: 0 }));
+    await expect(readHostKey(target)).resolves.toBe(hostKey);
+  });
+
+  it('fails when no host key file exists', async () => {
+    const target = fakeTarget(() => ({ stdout: '', stderr: 'no keys', code: 1 }));
+    await expect(readHostKey(target)).rejects.toThrow(/host key/);
+  });
+
+  it('rejects malformed host key output', async () => {
+    const target = fakeTarget(() => ({ stdout: 'totally not a key\n', stderr: '', code: 0 }));
+    await expect(readHostKey(target)).rejects.toThrow(/host key/);
+  });
+
+  it('rejects multi-line host key output', async () => {
+    const target = fakeTarget(() => ({ stdout: `${hostKey}\n${hostKey}\n`, stderr: '', code: 0 }));
+    await expect(readHostKey(target)).rejects.toThrow(/host key/);
   });
 });

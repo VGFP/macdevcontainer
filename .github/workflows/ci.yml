@@ -51,9 +51,14 @@ jobs:
       - name: Package extension
         run: pnpm package
 
+      - name: Record the VSIX digest
+        run: sha256sum macdevcontainer.vsix | tee macdevcontainer.vsix.sha256
+
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v7
         with:
           name: macdevcontainer-vsix
-          path: macdevcontainer.vsix
+          path: |
+            macdevcontainer.vsix
+            macdevcontainer.vsix.sha256
           if-no-files-found: error

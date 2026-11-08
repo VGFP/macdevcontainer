@@ -14,6 +14,8 @@ const entry: SshHostEntry = {
   user: 'root',
   identityFile: '/Users/test/.macdevcontainer/keys/abc_ed25519',
   forwardPorts: [5173, '3000:3000'],
+  hostKeyAlias: 'macdc-project-abc123',
+  knownHostsFile: '/Users/test/.macdevcontainer/known_hosts',
 };
 
 describe('ssh config', () => {
@@ -24,9 +26,38 @@ describe('ssh config', () => {
     expect(block).toContain('HostName 192.168.64.5');
     expect(block).toContain('User root');
     expect(block).toContain('IdentityFile /Users/test/.macdevcontainer/keys/abc_ed25519');
-    expect(block).toContain('StrictHostKeyChecking no');
     expect(block).toContain('LocalForward 5173 127.0.0.1:5173');
     expect(block).toContain('LocalForward 3000 127.0.0.1:3000');
+  });
+
+  it('pins the host key instead of accepting any key', () => {
+    const block = buildManagedSshBlock(entry);
+
+    expect(block).toContain('StrictHostKeyChecking yes');
+    expect(block).toContain(
+      'UserKnownHostsFile /Users/test/.macdevcontainer/known_hosts',
+    );
+    expect(block).toContain('HostKeyAlias macdc-project-abc123');
+    expect(block).not.toContain('StrictHostKeyChecking no');
+    expect(block).not.toContain('/dev/null');
+  });
+
+  it('rejects values that could inject ssh config directives', () => {
+    expect(() =>
+      buildManagedSshBlock({ ...entry, user: 'root\n    ProxyCommand evil' }),
+    ).toThrow(/SSH user name/);
+    expect(() =>
+      buildManagedSshBlock({ ...entry, hostName: '127.0.0.1\n    ForwardAgent yes' }),
+    ).toThrow(/host name/);
+    expect(() => buildManagedSshBlock({ ...entry, host: 'evil\nHost *' })).toThrow(
+      /host alias/,
+    );
+    expect(() => buildManagedSshBlock({ ...entry, hostKeyAlias: 'a b' })).toThrow(
+      /host key alias/,
+    );
+    expect(() =>
+      buildManagedSshBlock({ ...entry, knownHostsFile: 'relative/path' }),
+    ).toThrow(/known_hosts/);
   });
 
   it('includes the tunnel port when one is given', () => {

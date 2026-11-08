@@ -1,3 +1,4 @@
+import { isValidHostKey } from '../ssh/hostkeys';
 import { UserError, outputTail } from '../util/errors';
 import type { Logger } from '../util/logger';
 import type { RunResult } from '../util/process';
@@ -24,6 +25,36 @@ const LOCATE_SSHD = [
   '  exit 42',
   'fi',
 ].join('\n');
+
+const READ_HOST_KEY = [
+  'for key in /etc/ssh/ssh_host_ed25519_key.pub /etc/ssh/ssh_host_ecdsa_key.pub /etc/ssh/ssh_host_rsa_key.pub; do',
+  '  if [ -r "$key" ]; then',
+  '    cat "$key"',
+  '    exit 0',
+  '  fi',
+  'done',
+  'exit 1',
+].join('\n');
+
+/**
+ * Read the public host key from the target so it can be pinned in
+ * known_hosts. Runs after ensureSshd, which generates missing host keys.
+ */
+export async function readHostKey(target: CommandTarget): Promise<string> {
+  const result = await target.shell(READ_HOST_KEY, {
+    user: 'root',
+    timeoutMs: 30_000,
+  });
+
+  const key = result.stdout.trim();
+  if (result.code !== 0 || !isValidHostKey(key)) {
+    throw new UserError(
+      `Could not read the SSH host key from ${target.label}.`,
+      outputTail(result.stderr || result.stdout),
+    );
+  }
+  return key;
+}
 
 /** Install OpenSSH using whichever package manager the image provides. */
 export const SSHD_INSTALL_SCRIPT = [

@@ -22,7 +22,7 @@ export function parseSshRemoteHost(remoteName: string | undefined): string | und
         if (isRecord(parsed)) {
           const host = parsed.hostName ?? parsed.host ?? parsed.hostname;
           if (typeof host === 'string' && host.trim().length > 0) {
-            return host.trim();
+            return safeHostAlias(host.trim());
           }
         }
       }
@@ -31,7 +31,15 @@ export function parseSshRemoteHost(remoteName: string | undefined): string | und
     }
   }
 
-  return encoded;
+  return safeHostAlias(encoded);
+}
+
+/**
+ * The alias is passed to ssh as a single argument; anything starting with "-"
+ * would be parsed as an option, so only plain tokens are accepted.
+ */
+function safeHostAlias(alias: string): string | undefined {
+  return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(alias) ? alias : undefined;
 }
 
 /**

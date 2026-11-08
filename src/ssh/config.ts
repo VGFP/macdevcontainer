@@ -1,5 +1,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { UserError } from '../util/errors';
+import { HOST_ALIAS_PATTERN } from './hostkeys';
 
 export interface ForwardPort {
   localPort: number;
@@ -13,9 +15,22 @@ export interface SshHostEntry {
   user: string;
   identityFile: string;
   forwardPorts?: readonly (number | string)[];
+  /** known_hosts alias pinned for this host (see HostKeyAlias in ssh_config). */
+  hostKeyAlias: string;
+  /** Path to the known_hosts file that holds the pinned host key. */
+  knownHostsFile: string;
 }
 
 const FORWARD_PORT_PATTERN = /^(\d+)(?::(\d+))?$/;
+
+/**
+ * Values that are safe to interpolate as ssh_config arguments. Newlines,
+ * leading dashes, and quote characters would allow config injection or
+ * option smuggling, so only plain tokens and host names are accepted.
+ */
+const HOST_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9.:\[\]-]{0,253}$/;
+const USER_PATTERN = /^[A-Za-z_][A-Za-z0-9._-]{0,31}\$?$/;
+const PATH_PATTERN = /^[A-Za-z0-9_./~:@%+,\- ]+$/;
 
 export function defaultSshConfigPath(home = homedir()): string {
   return join(home, '.ssh', 'config');
@@ -55,6 +70,7 @@ export function forwardPortsToLocalForwards(
 }
 
 export function buildManagedSshBlock(entry: SshHostEntry): string {
+  validateEntry(entry);
   const lines = [
     beginMarker(entry.host),
     '# Managed by the macdevcontainer VS Code extension. Do not edit this block.',
@@ -64,8 +80,9 @@ export function buildManagedSshBlock(entry: SshHostEntry): string {
     ...(entry.port === undefined ? [] : [`    Port ${entry.port}`]),
     `    IdentityFile ${quoteSshValue(entry.identityFile)}`,
     '    IdentitiesOnly yes',
-    '    StrictHostKeyChecking no',
-    '    UserKnownHostsFile /dev/null',
+    '    StrictHostKeyChecking yes',
+    `    UserKnownHostsFile ${quoteSshValue(entry.knownHostsFile)}`,
+    `    HostKeyAlias ${entry.hostKeyAlias}`,
     '    LogLevel ERROR',
     '    ServerAliveInterval 15',
     '    ServerAliveCountMax 3',
@@ -131,6 +148,29 @@ function quoteSshValue(value: string): string {
     return value;
   }
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
+/**
+ * Reject values that could break out of the managed block and inject
+ * directives into the user's SSH configuration. This is defense in depth:
+ * the devcontainer parser already restricts most of these values.
+ */
+function validateEntry(entry: SshHostEntry): void {
+  if (!HOST_ALIAS_PATTERN.test(entry.host)) {
+    throw new UserError(`"${entry.host}" is not a valid SSH host alias.`);
+  }
+  if (!HOST_NAME_PATTERN.test(entry.hostName)) {
+    throw new UserError(`"${entry.hostName}" is not a valid SSH host name.`);
+  }
+  if (!USER_PATTERN.test(entry.user)) {
+    throw new UserError(`"${entry.user}" is not a valid SSH user name.`);
+  }
+  if (!HOST_ALIAS_PATTERN.test(entry.hostKeyAlias)) {
+    throw new UserError(`"${entry.hostKeyAlias}" is not a valid host key alias.`);
+  }
+  if (!PATH_PATTERN.test(entry.knownHostsFile) || !entry.knownHostsFile.startsWith('/')) {
+    throw new UserError('The known_hosts path must be an absolute path without quotes.');
+  }
 }
 
 function isPort(port: number): boolean {

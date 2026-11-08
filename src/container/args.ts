@@ -1,4 +1,5 @@
 import type { DevContainerConfig, LifecycleCommand } from '../devcontainer/types';
+import { UserError } from '../util/errors';
 import { normalizeMemory } from './memory';
 
 export const CONTAINER_LABEL = 'com.vgfp.macdevcontainer';
@@ -19,6 +20,19 @@ export interface CreateContainerOptions {
 /** Arguments for `container create`, excluding the leading `container` binary. */
 export function buildCreateArgs(options: CreateContainerOptions): string[] {
   const { config } = options;
+  // Commas separate the fields of the --mount value; a path containing one
+  // would inject mount fields instead of mounting the workspace as-is.
+  for (const [label, value] of [
+    ['workspace folder', options.workspaceRoot],
+    ['workspaceFolder', config.workspaceFolder],
+  ] as const) {
+    if (value.includes(',')) {
+      throw new UserError(
+        `The ${label} path contains a comma (",") and cannot be mounted safely.`,
+        'Move the project to a path without commas.',
+      );
+    }
+  }
   return [
     'create',
     '--name',

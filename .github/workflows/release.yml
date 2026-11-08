@@ -23,9 +23,15 @@ concurrency:
 jobs:
   release:
     name: Release
+    # Only release from CI runs of branch pushes in this repository. A
+    # workflow_run also fires for completed pull_request runs (including
+    # forks); checking out and building head_sha from those would run
+    # untrusted code with a write token.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.fork == false &&
        github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -109,14 +115,24 @@ jobs:
         if: steps.existing.outputs.skip != 'true'
         run: pnpm package
 
+      # Publish the digest next to the VSIX so downloads can be verified.
+      - name: Record the VSIX digest
+        if: steps.existing.outputs.skip != 'true'
+        id: digest
+        run: |
+          sha256sum macdevcontainer.vsix | tee macdevcontainer.vsix.sha256
+          echo "digest=$(cut -d' ' -f1 macdevcontainer.vsix.sha256)" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub release
         if: steps.existing.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ steps.version.outputs.tag }}" macdevcontainer.vsix \
+          gh release create "${{ steps.version.outputs.tag }}" \
+            macdevcontainer.vsix macdevcontainer.vsix.sha256 \
             --target "$(git rev-parse HEAD)" \
             --title "${{ steps.version.outputs.tag }}" \
+            --notes "SHA-256 of macdevcontainer.vsix: ${{ steps.digest.outputs.digest }}" \
             --generate-notes
 
       - name: Publish to VS Code Marketplace
