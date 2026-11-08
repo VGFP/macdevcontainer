@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title id="title">macOS Container Dev Containers</title>
+
+  <defs>
+    <linearGradient id="mdc-tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8C90A4"/>
+      <stop offset=".38" stop-color="#A9ABBE"/>
+      <stop offset=".8" stop-color="#7C8095"/>
+      <stop offset="1" stop-color="#6A6E82"/>
+    </linearGradient>
+    <radialGradient id="mdc-sheen" cx=".5" cy=".02" r=".85">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".26"/>
+      <stop offset=".45" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="mdc-glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D4D6E4"/>
+      <stop offset=".16" stop-color="#C5C7D8"/>
+      <stop offset=".65" stop-color="#B2B4C8"/>
+      <stop offset="1" stop-color="#9EA0B5"/>
+    </linearGradient>
+    <linearGradient id="mdc-rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/>
+      <stop offset=".28" stop-color="#FFFFFF" stop-opacity=".28"/>
+      <stop offset=".72" stop-color="#FFFFFF" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#33374D" stop-opacity=".42"/>
+    </linearGradient>
+    <radialGradient id="mdc-dot" cx=".38" cy=".3" r=".75">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset=".78" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E2E3ED"/>
+    </radialGradient>
+
+    <linearGradient id="mdc-top" x1=".15" y1="0" x2=".75" y2="1">
+      <stop offset="0" stop-color="#F8F9FC"/>
+      <stop offset=".5" stop-color="#E3E6F0"/>
+      <stop offset="1" stop-color="#D2D5E4"/>
+    </linearGradient>
+    <linearGradient id="mdc-left" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E3E6F1"/>
+      <stop offset=".5" stop-color="#C2C5D7"/>
+      <stop offset="1" stop-color="#AAADC4"/>
+    </linearGradient>
+    <linearGradient id="mdc-right" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#CDD1E1"/>
+      <stop offset=".5" stop-color="#ABAEC5"/>
+      <stop offset="1" stop-color="#8E91AA"/>
+    </linearGradient>
+    <linearGradient id="mdc-top-gloss" x1="0" y1="0" x2=".35" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".7"/>
+      <stop offset=".42" stop-color="#FFFFFF" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="mdc-side-gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".45"/>
+      <stop offset=".3" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="mdc-side-shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset=".6" stop-color="#141828" stop-opacity="0"/>
+      <stop offset="1" stop-color="#141828" stop-opacity=".26"/>
+    </linearGradient>
+
+    <filter id="mdc-shadow" x="-30%" y="-45%" width="160%" height="200%">
+      <feDropShadow dx="0" dy="3.5" stdDeviation="4" flood-color="#1A1E30" flood-opacity=".38"/>
+    </filter>
+    <filter id="mdc-glow" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+    <filter id="mdc-cube-shadow" x="-40%" y="-40%" width="180%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#141828" flood-opacity=".45"/>
+    </filter>
+    <filter id="mdc-soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+
+    <clipPath id="mdc-clip-top"><path d="M128 88 L200 124 L128 160 L56 124 Z"/></clipPath>
+    <clipPath id="mdc-clip-left"><path d="M56 124 L128 160 L128 232 L56 196 Z"/></clipPath>
+    <clipPath id="mdc-clip-right"><path d="M128 160 L200 124 L200 196 L128 232 Z"/></clipPath>
+  </defs>
+
+  <!-- frosted grey tile -->
+  <rect width="256" height="256" rx="58" fill="url(#mdc-tile)"/>
+  <rect width="256" height="256" rx="58" fill="url(#mdc-sheen)"/>
+  <rect x="1.5" y="1.5" width="253" height="253" rx="56.5"
+        fill="none" stroke="#FFFFFF" stroke-opacity=".26" stroke-width="3"/>
+
+  <!-- the container row -->
+  <g filter="url(#mdc-shadow)">
+    <rect x="44" y="28" width="168" height="44" rx="22" fill="url(#mdc-glass)"/>
+  </g>
+  <rect x="45.5" y="29.5" width="165" height="41" rx="20.5"
+        fill="none" stroke="url(#mdc-rim)" stroke-width="2.2"/>
+  <circle cx="186" cy="50" r="17" fill="#FFFFFF" opacity=".28" filter="url(#mdc-glow)"/>
+  <circle cx="186" cy="50" r="12" fill="url(#mdc-dot)"/>
+
+  <!-- the dev container, as a 3D glass box -->
+  <ellipse cx="128" cy="238" rx="60" ry="10" fill="#141828" opacity=".38" filter="url(#mdc-soft)"/>
+  <g filter="url(#mdc-cube-shadow)">
+    <path d="M128 160 L200 124 L200 196 L128 232 Z" fill="url(#mdc-right)"/>
+    <path d="M56 124 L128 160 L128 232 L56 196 Z" fill="url(#mdc-left)"/>
+    <path d="M128 88 L200 124 L128 160 L56 124 Z" fill="url(#mdc-top)"/>
+    <path d="M56 124 L128 160 L128 232 L56 196 Z" fill="url(#mdc-side-gloss)" clip-path="url(#mdc-clip-left)"/>
+    <path d="M128 160 L200 124 L200 196 L128 232 Z" fill="url(#mdc-side-gloss)" clip-path="url(#mdc-clip-right)"/>
+    <path d="M56 124 L128 160 L128 232 L56 196 Z" fill="url(#mdc-side-shade)" clip-path="url(#mdc-clip-left)"/>
+    <path d="M128 160 L200 124 L200 196 L128 232 Z" fill="url(#mdc-side-shade)" clip-path="url(#mdc-clip-right)"/>
+    <path d="M128 88 L200 124 L128 160 L56 124 Z" fill="url(#mdc-top-gloss)" clip-path="url(#mdc-clip-top)"/>
+  </g>
+
+  <!-- glass bevels -->
+  <path d="M128 88 L200 124 L200 196 L128 232 L56 196 L56 124 Z"
+        fill="none" stroke="#FFFFFF" stroke-opacity=".82" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M56 124 L128 160 L200 124 M128 160 L128 232"
+        fill="none" stroke="#FFFFFF" stroke-opacity=".58" stroke-width="2.4" stroke-linejoin="round"/>
+</svg>
