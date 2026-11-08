@@ -31,26 +31,28 @@
       <stop offset="1" stop-color="#E2E3ED"/>
     </radialGradient>
 
-    <!-- glass tube: lit from above, settling into shadow at the base -->
-    <linearGradient id="mdc-edge" gradientUnits="userSpaceOnUse" x1="0" y1="86" x2="0" y2="230">
+    <!-- glass tube: lit from above, solid and dark at the base so the edge stays crisp -->
+    <linearGradient id="mdc-edge" gradientUnits="userSpaceOnUse" x1="0" y1="101" x2="0" y2="219">
       <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset=".18" stop-color="#F2F3F9"/>
-      <stop offset=".5" stop-color="#CDD0E0"/>
-      <stop offset=".78" stop-color="#989CB3"/>
-      <stop offset="1" stop-color="#757A91"/>
+      <stop offset=".2" stop-color="#F5F6FB"/>
+      <stop offset=".46" stop-color="#DFE2ED"/>
+      <stop offset=".68" stop-color="#BCC0D2"/>
+      <stop offset=".84" stop-color="#9398AD"/>
+      <stop offset=".93" stop-color="#5C6176"/>
+      <stop offset="1" stop-color="#44495D"/>
     </linearGradient>
-    <linearGradient id="mdc-edge-lit" gradientUnits="userSpaceOnUse" x1="0" y1="86" x2="0" y2="230">
+    <linearGradient id="mdc-edge-lit" gradientUnits="userSpaceOnUse" x1="0" y1="101" x2="0" y2="219">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
-      <stop offset=".42" stop-color="#FFFFFF" stop-opacity=".55"/>
-      <stop offset=".76" stop-color="#FFFFFF" stop-opacity=".16"/>
+      <stop offset=".42" stop-color="#FFFFFF" stop-opacity=".5"/>
+      <stop offset=".76" stop-color="#FFFFFF" stop-opacity=".14"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
 
     <filter id="mdc-shadow" x="-30%" y="-45%" width="160%" height="200%">
-      <feDropShadow dx="0" dy="3.5" stdDeviation="4" flood-color="#1A1E30" flood-opacity=".38"/>
+      <feDropShadow dx="0" dy="4.5" stdDeviation="5" flood-color="#1A1E30" flood-opacity=".36"/>
     </filter>
     <filter id="mdc-glow" x="-150%" y="-150%" width="400%" height="400%">
-      <feGaussianBlur stdDeviation="4"/>
+      <feGaussianBlur stdDeviation="5"/>
     </filter>
   </defs>
 
@@ -60,26 +62,26 @@
   <rect x="1.5" y="1.5" width="253" height="253" rx="56.5"
         fill="none" stroke="#FFFFFF" stroke-opacity=".26" stroke-width="3"/>
 
-  <!-- the container row -->
+  <!-- container row -->
   <g filter="url(#mdc-shadow)">
-    <rect x="44" y="28" width="168" height="44" rx="22" fill="url(#mdc-glass)"/>
+    <rect x="37" y="38" width="182" height="53" rx="26.5" fill="url(#mdc-glass)"/>
   </g>
-  <rect x="45.5" y="29.5" width="165" height="41" rx="20.5"
-        fill="none" stroke="url(#mdc-rim)" stroke-width="2.2"/>
-  <circle cx="186" cy="50" r="17" fill="#FFFFFF" opacity=".28" filter="url(#mdc-glow)"/>
-  <circle cx="186" cy="50" r="12" fill="url(#mdc-dot)"/>
+  <rect x="38.5" y="39.5" width="179" height="50" rx="25"
+        fill="none" stroke="url(#mdc-rim)" stroke-width="2.4"/>
+  <circle cx="191" cy="64.5" r="21.5" fill="#FFFFFF" opacity=".26" filter="url(#mdc-glow)"/>
+  <circle cx="191" cy="64.5" r="15.5" fill="url(#mdc-dot)"/>
 
-  <!-- the dev container: a hollow glass frame, true isometric proportions -->
+  <!-- the dev container: hollow glass box filling the lower two row slots -->
   <g>
-    <path d="M69.54 124.25 L128 158 L186.46 124.25 M128 158 L128 225.5" fill="none" stroke="url(#mdc-edge)" stroke-width="9"
-          stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="M112.41 95 Q128 86 143.59 95 L174.77 113 Q190.35 122 190.35 140 L190.35 176 Q190.35 194 174.77 203 L143.59 221 Q128 230 112.41 221 L81.23 203 Q65.65 194 65.65 176 L65.65 140 Q65.65 122 81.23 113 Z" fill="none" stroke="url(#mdc-edge)" stroke-width="9"
+    <path d="M41.72 136.34 L128 165 L214.28 136.34 M128 165 L128 215.68" fill="none" stroke="url(#mdc-edge)" stroke-width="11"
+          stroke-linejoin="round" stroke-linecap="butt"/>
+    <path d="M109.13 107.63 Q128 101 146.87 107.63 L200.13 126.37 Q219 133 219 153 L219 167 Q219 187 200.13 193.63 L146.87 212.37 Q128 219 109.13 212.37 L55.87 193.63 Q37 187 37 167 L37 153 Q37 133 55.87 126.37 Z" fill="none" stroke="url(#mdc-edge)" stroke-width="11"
           stroke-linejoin="round" stroke-linecap="round"/>
   </g>
 
   <!-- inner specular core -->
-  <path d="M69.54 124.25 L128 158 L186.46 124.25 M128 158 L128 225.5" fill="none" stroke="url(#mdc-edge-lit)" stroke-width="3"
-        stroke-linejoin="round" stroke-linecap="round"/>
-  <path d="M112.41 95 Q128 86 143.59 95 L174.77 113 Q190.35 122 190.35 140 L190.35 176 Q190.35 194 174.77 203 L143.59 221 Q128 230 112.41 221 L81.23 203 Q65.65 194 65.65 176 L65.65 140 Q65.65 122 81.23 113 Z" fill="none" stroke="url(#mdc-edge-lit)" stroke-width="3.2"
+  <path d="M41.72 136.34 L128 165 L214.28 136.34 M128 165 L128 215.68" fill="none" stroke="url(#mdc-edge-lit)" stroke-width="3.5"
+        stroke-linejoin="round" stroke-linecap="butt"/>
+  <path d="M109.13 107.63 Q128 101 146.87 107.63 L200.13 126.37 Q219 133 219 153 L219 167 Q219 187 200.13 193.63 L146.87 212.37 Q128 219 109.13 212.37 L55.87 193.63 Q37 187 37 167 L37 153 Q37 133 55.87 126.37 Z" fill="none" stroke="url(#mdc-edge-lit)" stroke-width="3.7"
         stroke-linejoin="round" stroke-linecap="round"/>
 </svg>
