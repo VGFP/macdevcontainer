@@ -76,6 +76,7 @@
     <clipPath id="mdc-clip-top"><path d="M128 88 L200 124 L128 160 L56 124 Z"/></clipPath>
     <clipPath id="mdc-clip-left"><path d="M56 124 L128 160 L128 232 L56 196 Z"/></clipPath>
     <clipPath id="mdc-clip-right"><path d="M128 160 L200 124 L200 196 L128 232 Z"/></clipPath>
+    <clipPath id="mdc-clip-cube"><path d="M115.48 94.26 Q128 88 140.52 94.26 L187.48 117.74 Q200 124 200.00 138.00 L200.00 182.00 Q200 196 187.48 202.26 L140.52 225.74 Q128 232 115.48 225.74 L68.52 202.26 Q56 196 56.00 182.00 L56.00 138.00 Q56 124 68.52 117.74 Z"/></clipPath>
   </defs>
 
   <!-- frosted grey tile -->
@@ -93,9 +94,9 @@
   <circle cx="186" cy="50" r="17" fill="#FFFFFF" opacity=".28" filter="url(#mdc-glow)"/>
   <circle cx="186" cy="50" r="12" fill="url(#mdc-dot)"/>
 
-  <!-- the dev container, as a 3D glass box -->
+  <!-- the dev container, as a 3D glass box with rounded glass edges -->
   <ellipse cx="128" cy="238" rx="60" ry="10" fill="#141828" opacity=".38" filter="url(#mdc-soft)"/>
-  <g filter="url(#mdc-cube-shadow)">
+  <g filter="url(#mdc-cube-shadow)" clip-path="url(#mdc-clip-cube)">
     <path d="M128 160 L200 124 L200 196 L128 232 Z" fill="url(#mdc-right)"/>
     <path d="M56 124 L128 160 L128 232 L56 196 Z" fill="url(#mdc-left)"/>
     <path d="M128 88 L200 124 L128 160 L56 124 Z" fill="url(#mdc-top)"/>
@@ -104,11 +105,14 @@
     <path d="M56 124 L128 160 L128 232 L56 196 Z" fill="url(#mdc-side-shade)" clip-path="url(#mdc-clip-left)"/>
     <path d="M128 160 L200 124 L200 196 L128 232 Z" fill="url(#mdc-side-shade)" clip-path="url(#mdc-clip-right)"/>
     <path d="M128 88 L200 124 L128 160 L56 124 Z" fill="url(#mdc-top-gloss)" clip-path="url(#mdc-clip-top)"/>
+
+    <!-- inner glass creases -->
+    <path d="M56 124 L128 160 L200 124 M128 160 L128 232"
+          fill="none" stroke="#FFFFFF" stroke-opacity=".58" stroke-width="2.4"
+          stroke-linejoin="round" stroke-linecap="round"/>
   </g>
 
-  <!-- glass bevels -->
-  <path d="M128 88 L200 124 L200 196 L128 232 L56 196 L56 124 Z"
-        fill="none" stroke="#FFFFFF" stroke-opacity=".82" stroke-width="2.8" stroke-linejoin="round"/>
-  <path d="M56 124 L128 160 L200 124 M128 160 L128 232"
-        fill="none" stroke="#FFFFFF" stroke-opacity=".58" stroke-width="2.4" stroke-linejoin="round"/>
+  <!-- rounded outer bevel -->
+  <path d="M115.48 94.26 Q128 88 140.52 94.26 L187.48 117.74 Q200 124 200.00 138.00 L200.00 182.00 Q200 196 187.48 202.26 L140.52 225.74 Q128 232 115.48 225.74 L68.52 202.26 Q56 196 56.00 182.00 L56.00 138.00 Q56 124 68.52 117.74 Z" fill="none" stroke="#FFFFFF" stroke-opacity=".82" stroke-width="2.8"
+        stroke-linejoin="round" stroke-linecap="round"/>
 </svg>
