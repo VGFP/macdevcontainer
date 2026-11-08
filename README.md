@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.png" alt="macdevcontainer icon" width="128">
+</p>
+
 # macdevcontainer
 
 [![CI](https://github.com/VGFP/macdevcontainer/actions/workflows/ci.yml/badge.svg)](https://github.com/VGFP/macdevcontainer/actions/workflows/ci.yml)

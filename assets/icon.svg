@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title id="title">macOS Container Dev Containers</title>
+
+  <defs>
+    <linearGradient id="mdc-tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8C90A4"/>
+      <stop offset=".38" stop-color="#A9ABBE"/>
+      <stop offset=".8" stop-color="#7C8095"/>
+      <stop offset="1" stop-color="#6A6E82"/>
+    </linearGradient>
+    <radialGradient id="mdc-sheen" cx=".5" cy=".02" r=".85">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".26"/>
+      <stop offset=".45" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="mdc-glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D4D6E4"/>
+      <stop offset=".16" stop-color="#C5C7D8"/>
+      <stop offset=".65" stop-color="#B2B4C8"/>
+      <stop offset="1" stop-color="#9EA0B5"/>
+    </linearGradient>
+    <linearGradient id="mdc-rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/>
+      <stop offset=".28" stop-color="#FFFFFF" stop-opacity=".28"/>
+      <stop offset=".72" stop-color="#FFFFFF" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#33374D" stop-opacity=".42"/>
+    </linearGradient>
+    <radialGradient id="mdc-dot" cx=".38" cy=".3" r=".75">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset=".78" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E2E3ED"/>
+    </radialGradient>
+
+    <linearGradient id="mdc-edge" gradientUnits="userSpaceOnUse" x1="0" y1="107" x2="0" y2="219">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset=".18" stop-color="#EFF1F7"/>
+      <stop offset=".55" stop-color="#DFE2EC"/>
+      <stop offset=".85" stop-color="#CFD3E2"/>
+      <stop offset="1" stop-color="#C4C8D8"/>
+    </linearGradient>
+    <linearGradient id="mdc-edge-lit" gradientUnits="userSpaceOnUse" x1="0" y1="107" x2="0" y2="219">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".8"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity=".4"/>
+    </linearGradient>
+
+    <filter id="mdc-row-shadow" x="-30%" y="-45%" width="160%" height="200%">
+      <feDropShadow dx="0" dy="4.5" stdDeviation="5" flood-color="#1A1E30" flood-opacity=".36"/>
+    </filter>
+    <filter id="mdc-glow" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+  </defs>
+
+  <!-- frosted grey tile -->
+  <rect width="256" height="256" rx="58" fill="url(#mdc-tile)"/>
+  <rect width="256" height="256" rx="58" fill="url(#mdc-sheen)"/>
+  <rect x="1.5" y="1.5" width="253" height="253" rx="56.5"
+        fill="none" stroke="#FFFFFF" stroke-opacity=".26" stroke-width="3"/>
+
+  <!-- container row, same width and padding as the reference -->
+  <g filter="url(#mdc-row-shadow)">
+    <rect x="37" y="38" width="182" height="53" rx="26.5" fill="url(#mdc-glass)"/>
+  </g>
+  <rect x="38.5" y="39.5" width="179" height="50" rx="25"
+        fill="none" stroke="url(#mdc-rim)" stroke-width="2.4"/>
+  <circle cx="191" cy="64.5" r="21.5" fill="#FFFFFF" opacity=".26" filter="url(#mdc-glow)"/>
+  <circle cx="191" cy="64.5" r="15.5" fill="url(#mdc-dot)"/>
+
+  <!-- the dev container, a hollow glass cube in true isometric -->
+  <g>
+    <path d="M83.4 137.25 L128 163 L172.6 137.25 M128 163 L128 214.5" fill="none" stroke="url(#mdc-edge)" stroke-width="9"
+          stroke-linejoin="round" stroke-linecap="butt"/>
+    <path d="M112.41 116 Q128 107 143.59 116 L160.91 126 Q176.5 135 176.5 153 L176.5 173 Q176.5 191 160.91 200 L143.59 210 Q128 219 112.41 210 L95.09 200 Q79.5 191 79.5 173 L79.5 153 Q79.5 135 95.09 126 Z" fill="none" stroke="url(#mdc-edge)" stroke-width="9"
+          stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+
+  <path d="M83.4 137.25 L128 163 L172.6 137.25 M128 163 L128 214.5" fill="none" stroke="url(#mdc-edge-lit)" stroke-width="3"
+        stroke-linejoin="round" stroke-linecap="butt"/>
+  <path d="M112.41 116 Q128 107 143.59 116 L160.91 126 Q176.5 135 176.5 153 L176.5 173 Q176.5 191 160.91 200 L143.59 210 Q128 219 112.41 210 L95.09 200 Q79.5 191 79.5 173 L79.5 153 Q79.5 135 95.09 126 Z" fill="none" stroke="url(#mdc-edge-lit)" stroke-width="3.1"
+        stroke-linejoin="round" stroke-linecap="round"/>
+</svg>
