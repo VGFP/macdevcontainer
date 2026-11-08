@@ -52,12 +52,6 @@
     <filter id="mdc-glow" x="-150%" y="-150%" width="400%" height="400%">
       <feGaussianBlur stdDeviation="4"/>
     </filter>
-    <filter id="mdc-edge-shadow" x="-30%" y="-30%" width="160%" height="180%">
-      <feDropShadow dx="0" dy="4" stdDeviation="4.5" flood-color="#141828" flood-opacity=".4"/>
-    </filter>
-    <filter id="mdc-soft" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="6"/>
-    </filter>
   </defs>
 
   <!-- frosted grey tile -->
@@ -76,10 +70,7 @@
   <circle cx="186" cy="50" r="12" fill="url(#mdc-dot)"/>
 
   <!-- the dev container: a hollow glass frame, true isometric proportions -->
-  <ellipse cx="128" cy="242" rx="50" ry="8"
-           fill="#141828" opacity=".3" filter="url(#mdc-soft)"/>
-
-  <g filter="url(#mdc-edge-shadow)">
+  <g>
     <path d="M69.54 124.25 L128 158 L186.46 124.25 M128 158 L128 225.5" fill="none" stroke="url(#mdc-edge)" stroke-width="9"
           stroke-linejoin="round" stroke-linecap="round"/>
     <path d="M112.41 95 Q128 86 143.59 95 L174.77 113 Q190.35 122 190.35 140 L190.35 176 Q190.35 194 174.77 203 L143.59 221 Q128 230 112.41 221 L81.23 203 Q65.65 194 65.65 176 L65.65 140 Q65.65 122 81.23 113 Z" fill="none" stroke="url(#mdc-edge)" stroke-width="9"
