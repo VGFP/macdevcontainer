@@ -91,8 +91,61 @@ Available commands:
 |---|---|
 | **macOS Container: Reopen Folder in Container** | Create or start the container, configure SSH, and open the workspace |
 | **macOS Container: Rebuild Container** | Remove the existing container and recreate it from the current configuration |
+| **macOS Container: Reopen Folder in Container Machine** | Open the workspace inside an existing Apple [container machine](https://github.com/apple/container/blob/main/docs/container-machine.md) |
+| **macOS Container: Forget Container Machine Connection** | Remove the managed SSH entry for the container machine without deleting the machine |
 | **macOS Container: Remove Container** | Remove the container and its managed SSH config block |
 | **macOS Container: Show Log** | Open the extension output channel |
+
+### Container machines
+
+Apple's **container machine** is a persistent Linux environment that mounts your
+macOS home directory read-write at the same path, forwards your SSH agent, and
+runs the image's init system. If you already have one, macdevcontainer can open
+the current workspace directly inside it instead of creating a dedicated
+container:
+
+```bash
+container machine create ubuntu:24.04 --name dev
+# optional: container machine set-default dev
+```
+
+Then run **macOS Container: Reopen Folder in Container Machine**. The extension:
+
+1. uses `macdevcontainer.machine` if set, otherwise the default machine, or
+   prompts when several machines exist;
+2. boots the machine if needed and checks that the workspace is reachable;
+3. runs `postCreateCommand` once per project and `postStartCommand` when it had
+   to start the machine;
+4. installs and starts `sshd` inside the machine (using the image's package
+   manager if OpenSSH is missing) and injects a per-project key;
+5. opens the workspace over Remote - SSH as the machine's host-matching user.
+
+Things to know:
+
+- The workspace must live under your macOS home directory, because that is the
+  only path a container machine mounts. `~/Desktop`, `~/Documents` and
+  `~/Downloads` are still blocked by macOS privacy.
+- The machine's own image and guest user are used. `image`, `workspaceFolder`,
+  `remoteUser` and `hostRequirements` from `devcontainer.json` do not apply;
+  `forwardPorts`, `postCreateCommand` and `postStartCommand` still do.
+- Lifecycle commands run as the machine's host-matching user (passwordless
+  `sudo` is available), with the workspace root as the working directory.
+- The first attach installs OpenSSH into the machine if it is missing. This
+  changes the machine, not the host.
+- Container machines create the guest account with a locked password hash, and
+  OpenSSH rejects every login for a locked account. The extension replaces the
+  lock marker with an unusable password hash so public-key SSH works; password
+  login remains impossible.
+- This is not nested containerisation: the project runs directly in the
+  machine's Linux environment, not in a new container inside it.
+
+Set `macdevcontainer.machine` to pin a machine:
+
+```jsonc
+{
+  "macdevcontainer.machine": "dev"
+}
+```
 
 ### End-to-end example
 

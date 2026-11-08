@@ -65,6 +65,31 @@ describe('parseDevContainer', () => {
     expect(() => parseDevContainer('{}', file, workspace)).toThrow(/"image" is required/);
   });
 
+  it('allows a missing image when the image comes from a container machine', () => {
+    const { config, warnings } = parseDevContainer(
+      '{"name":"Machine","forwardPorts":[3000]}',
+      file,
+      workspace,
+      { requireImage: false },
+    );
+
+    expect(warnings).toEqual([]);
+    expect(config.image).toBe('');
+    expect(config.forwardPorts).toEqual([3000]);
+  });
+
+  it('treats a build-only configuration as a warning in container machine mode', () => {
+    const { config, warnings } = parseDevContainer(
+      '{"build":{"dockerfile":"Dockerfile"}}',
+      file,
+      workspace,
+      { requireImage: false },
+    );
+
+    expect(config.image).toBe('');
+    expect(warnings.join('\n')).toContain('"build"');
+  });
+
   it('validates host requirements', () => {
     const { config } = parseDevContainer(
       '{"image":"node:22","hostRequirements":{"cpus":2,"memory":"4GB"}}',

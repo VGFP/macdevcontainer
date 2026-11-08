@@ -19,3 +19,12 @@ export function containerNameForWorkspace(workspaceRoot: string): string {
   const base = sanitizeName(posix.basename(workspaceRoot)).slice(0, 24).replace(/[-_.]+$/, '');
   return `macdc-${base || 'workspace'}-${projectId(workspaceRoot).slice(0, 10)}`;
 }
+
+/**
+ * SSH host alias for a workspace opened in a container machine. The machine is
+ * selected at open time, so the alias stays stable when the user switches
+ * between machines.
+ */
+export function machineSshHostForWorkspace(workspaceRoot: string): string {
+  return `macdc-machine-${projectId(workspaceRoot).slice(0, 10)}`;
+}

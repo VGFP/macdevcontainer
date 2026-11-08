@@ -69,6 +69,8 @@ try {
   const expected = [
     'macdevcontainer.reopenInContainer',
     'macdevcontainer.rebuildContainer',
+    'macdevcontainer.reopenInMachine',
+    'macdevcontainer.forgetMachine',
     'macdevcontainer.removeContainer',
     'macdevcontainer.showLog',
   ];
