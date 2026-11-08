@@ -77,6 +77,17 @@ pnpm dlx @vscode/vsce package --no-dependencies
 # then: Extensions → … → Install from VSIX, or run the Extension Development Host with F5
 ```
 
+### Verifying the download
+
+Every GitHub Release publishes the extension together with its SHA-256 digest: as a `macdevcontainer.vsix.sha256` asset next to the VSIX, and printed in the release notes. After downloading both files from the [releases page](https://github.com/VGFP/macdevcontainer/releases):
+
+```bash
+sha256sum -c macdevcontainer.vsix.sha256      # Linux
+shasum -a 256 -c macdevcontainer.vsix.sha256  # macOS
+```
+
+The digest covers the GitHub Release asset. The Marketplace copy is published from the same VSIX in the same workflow run.
+
 ---
 
 ## Usage
@@ -265,8 +276,8 @@ Merging to `main` runs CI first. If CI succeeds, the `Release` workflow:
 
 1. checks out the commit that passed CI,
 2. bumps the patch version locally from the latest `vX.Y.Z` tag (or the selected bump for a manual run),
-3. packages the VSIX,
-4. creates a `vX.Y.Z` tag and a GitHub Release with the VSIX attached,
+3. packages the VSIX and computes its SHA-256 digest,
+4. creates a `vX.Y.Z` tag and a GitHub Release with the VSIX and its `.sha256` checksum attached (the digest is also printed in the release notes),
 5. publishes to the VS Code Marketplace when `VSCE_PAT` is configured.
 
 The workflow does not push commits to `main`, so the `main protection` ruleset stays intact. `package.json` on `main` keeps the last committed version; released versions live in tags and GitHub Releases.

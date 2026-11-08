@@ -115,14 +115,24 @@ jobs:
         if: steps.existing.outputs.skip != 'true'
         run: pnpm package
 
+      # Publish the digest next to the VSIX so downloads can be verified.
+      - name: Record the VSIX digest
+        if: steps.existing.outputs.skip != 'true'
+        id: digest
+        run: |
+          sha256sum macdevcontainer.vsix | tee macdevcontainer.vsix.sha256
+          echo "digest=$(cut -d' ' -f1 macdevcontainer.vsix.sha256)" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub release
         if: steps.existing.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ steps.version.outputs.tag }}" macdevcontainer.vsix \
+          gh release create "${{ steps.version.outputs.tag }}" \
+            macdevcontainer.vsix macdevcontainer.vsix.sha256 \
             --target "$(git rev-parse HEAD)" \
             --title "${{ steps.version.outputs.tag }}" \
+            --notes "SHA-256 of macdevcontainer.vsix: ${{ steps.digest.outputs.digest }}" \
             --generate-notes
 
       - name: Publish to VS Code Marketplace
