@@ -67,6 +67,39 @@ export function buildExecArgs(
   return args;
 }
 
+export interface MachineExecOptions extends ExecOptions {
+  /** Run as root instead of the host-matching container machine user. */
+  root?: boolean;
+  /** Keep stdin open so a script can be piped to `sh -s`. */
+  interactive?: boolean;
+}
+
+/** Arguments for `container machine run`, excluding the leading `container` binary. */
+export function buildMachineRunArgs(
+  machineName: string,
+  command: readonly string[],
+  options: MachineExecOptions = {},
+): string[] {
+  const args = ['machine', 'run', '--name', machineName];
+  if (options.interactive) {
+    args.push('--interactive');
+  }
+  if (options.root || options.user === 'root') {
+    args.push('--root');
+  } else if (options.user) {
+    args.push('--user', options.user);
+  }
+  if (options.workdir) {
+    args.push('--workdir', options.workdir);
+  }
+  for (const [key, value] of Object.entries(options.env ?? {})) {
+    args.push('--env', `${key}=${value}`);
+  }
+  // Always use "--" so commands such as "sh -c ..." are not parsed as options.
+  args.push('--', ...command);
+  return args;
+}
+
 export interface LifecycleStep {
   label: string;
   command: string;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCreateArgs,
   buildExecArgs,
+  buildMachineRunArgs,
   CONTAINER_INIT_COMMAND,
   lifecycleSteps,
 } from '../src/container/args';
@@ -88,6 +89,48 @@ describe('buildExecArgs', () => {
       '-c',
       'echo hello',
     ]);
+  });
+});
+
+describe('buildMachineRunArgs', () => {
+  it('runs a command as the machine user with an explicit separator', () => {
+    const args = buildMachineRunArgs('dev', ['sh', '-c', 'echo hello'], {
+      workdir: '/Users/test/project',
+    });
+
+    expect(args).toEqual([
+      'machine',
+      'run',
+      '--name',
+      'dev',
+      '--workdir',
+      '/Users/test/project',
+      '--',
+      'sh',
+      '-c',
+      'echo hello',
+    ]);
+  });
+
+  it('maps root and user options correctly', () => {
+    expect(buildMachineRunArgs('dev', ['id'], { root: true })).toContain('--root');
+    expect(buildMachineRunArgs('dev', ['id'], { user: 'root' })).toContain('--root');
+    expect(buildMachineRunArgs('dev', ['id'], { user: 'alice' })).toEqual([
+      'machine',
+      'run',
+      '--name',
+      'dev',
+      '--user',
+      'alice',
+      '--',
+      'id',
+    ]);
+  });
+
+  it('passes environment variables before the separator', () => {
+    const args = buildMachineRunArgs('dev', ['env'], { env: { FOO: 'bar' } });
+    expect(args.slice(0, 6)).toEqual(['machine', 'run', '--name', 'dev', '--env', 'FOO=bar']);
+    expect(args.at(-2)).toBe('--');
   });
 });
 

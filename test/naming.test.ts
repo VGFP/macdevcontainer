@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { containerNameForWorkspace, projectId, sanitizeName } from '../src/container/naming';
+import {
+  containerNameForWorkspace,
+  machineSshHostForWorkspace,
+  projectId,
+  sanitizeName,
+} from '../src/container/naming';
 
 describe('naming', () => {
   it('is deterministic for a workspace path', () => {
@@ -24,5 +29,12 @@ describe('naming', () => {
   it('sanitizes unusual characters and trims separators', () => {
     expect(sanitizeName('  Foo / Bar!! ')).toBe('foo-bar');
     expect(sanitizeName('---')).toBe('');
+  });
+
+  it('builds a stable, safe SSH host alias for container machines', () => {
+    const alias = machineSshHostForWorkspace('/Users/test/My Project!');
+    expect(alias).toMatch(/^macdc-machine-[a-f0-9]+$/);
+    expect(alias).toBe(machineSshHostForWorkspace('/Users/test/My Project!'));
+    expect(alias).not.toBe(containerNameForWorkspace('/Users/test/My Project!'));
   });
 });
