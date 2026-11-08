@@ -66,6 +66,26 @@ describe('buildCreateArgs', () => {
       '4096M',
     ]);
   });
+
+  it('rejects paths that would inject fields into the mount specification', () => {
+    expect(() =>
+      buildCreateArgs({
+        containerName: 'macdc-project-abc',
+        workspaceRoot: '/Users/test/proj,target=/etc',
+        image: 'node:22',
+        config,
+      }),
+    ).toThrow(/comma/);
+
+    expect(() =>
+      buildCreateArgs({
+        containerName: 'macdc-project-abc',
+        workspaceRoot: '/Users/test/project',
+        image: 'node:22',
+        config: { ...config, workspaceFolder: '/a,ro' },
+      }),
+    ).toThrow(/comma/);
+  });
 });
 
 describe('buildExecArgs', () => {

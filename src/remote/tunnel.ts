@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { UserError, outputTail } from '../util/errors';
 import type { Logger } from '../util/logger';
 import { canConnect, getFreePort, waitForTcp } from '../util/net';
-import { delay } from '../util/process';
+import { delay, run } from '../util/process';
 
 export interface StartTunnelOptions {
   projectId: string;
@@ -120,7 +120,7 @@ export async function stopSshTunnel(projectId: string): Promise<void> {
     return;
   }
 
-  if (isAlive(state.pid)) {
+  if (isAlive(state.pid) && (await isSshProcess(state.pid))) {
     try {
       process.kill(state.pid, 'SIGTERM');
     } catch {
@@ -158,6 +158,20 @@ function isAlive(pid: number): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * The state file outlives reboots, so a recorded PID may now belong to an
+ * unrelated process. Only signal it when it still looks like our ssh tunnel.
+ */
+async function isSshProcess(pid: number): Promise<boolean> {
+  const result = await run('ps', ['-p', String(pid), '-o', 'comm='], {
+    timeoutMs: 5_000,
+  });
+  if (result.code !== 0) {
+    return false;
+  }
+  return /(^|\/)ssh\d*$/.test(result.stdout.trim());
 }
 
 async function readState(path: string): Promise<TunnelState | undefined> {

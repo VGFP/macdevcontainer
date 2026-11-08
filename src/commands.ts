@@ -13,6 +13,7 @@ import {
 import {
   ensureSshd,
   installAuthorizedKey,
+  readHostKey,
   unlockAccount,
   type CommandTarget,
 } from './container/ssh';
@@ -28,6 +29,7 @@ import {
   upsertManagedSshBlock,
 } from './ssh/config';
 import { ensureKeyPair } from './ssh/keys';
+import { defaultKnownHostsFile, updateKnownHostsEntry } from './ssh/hostkeys';
 import { verifySsh } from './ssh/verify';
 import { CancelledError, errorMessage, outputTail, UserError } from './util/errors';
 import { readTextFileIfExists, writePrivateFile } from './util/fs';
@@ -186,6 +188,13 @@ class CommandController {
           shell: (script, options) => cli.exec(containerName, ['sh', '-c', script], options),
         };
         await ensureSshd(target, this.logger);
+        const hostKey = await readHostKey(target);
+        const knownHostsFile = defaultKnownHostsFile();
+        const existingKnownHosts = (await readTextFileIfExists(knownHostsFile)) ?? '';
+        await writePrivateFile(
+          knownHostsFile,
+          updateKnownHostsEntry(existingKnownHosts, containerName, hostKey),
+        );
         const key = await ensureKeyPair(identifier);
         await installAuthorizedKey(
           target,
@@ -224,6 +233,8 @@ class CommandController {
             user: config.remoteUser,
             identityFile,
             forwardPorts: config.forwardPorts,
+            hostKeyAlias: containerName,
+            knownHostsFile,
           }),
         );
 
@@ -395,6 +406,14 @@ class CommandController {
       progress.report({ message: 'Configuring SSH…' });
       await unlockAccount(target, machineUser);
       await ensureSshd(target, this.logger);
+      const sshHost = machineSshHostForWorkspace(context.workspaceRoot);
+      const hostKey = await readHostKey(target);
+      const knownHostsFile = defaultKnownHostsFile();
+      const existingKnownHosts = (await readTextFileIfExists(knownHostsFile)) ?? '';
+      await writePrivateFile(
+        knownHostsFile,
+        updateKnownHostsEntry(existingKnownHosts, sshHost, hostKey),
+      );
       const key = await ensureKeyPair(identifier);
       await installAuthorizedKey(target, machineUser, key.publicKey, identifier);
 
@@ -417,7 +436,6 @@ class CommandController {
         port = tunnel.port;
       }
 
-      const sshHost = machineSshHostForWorkspace(context.workspaceRoot);
       const identityFile = key.privateKeyPath.replace(/\\/g, '/');
       const existingConfig = (await readTextFileIfExists(context.sshConfigFile)) ?? '';
       await writePrivateFile(
@@ -429,6 +447,8 @@ class CommandController {
           user: machineUser,
           identityFile,
           forwardPorts: config.forwardPorts,
+          hostKeyAlias: sshHost,
+          knownHostsFile,
         }),
       );
 
@@ -662,6 +682,13 @@ class CommandController {
   }
 
   private async getRunContext(): Promise<RunContext> {
+    if (!vscode.workspace.isTrusted) {
+      throw new UserError(
+        'This workspace is not trusted.',
+        'Trust the folder (Command Palette → "Workspaces: Manage Workspace Trust") before running macdevcontainer commands. devcontainer.json can run commands and change SSH configuration.',
+      );
+    }
+
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
       throw new UserError('Open a folder before using macdevcontainer.');

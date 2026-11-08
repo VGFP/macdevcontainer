@@ -35,6 +35,11 @@ describe('parseSshRemoteHost', () => {
     const encoded = Buffer.from('not json', 'utf8').toString('hex');
     expect(parseSshRemoteHost(`ssh-remote+${encoded}`)).toBe(encoded);
   });
+
+  it('rejects aliases that ssh would parse as options', () => {
+    expect(parseSshRemoteHost('ssh-remote+-oProxyCommand=evil')).toBeUndefined();
+    expect(parseSshRemoteHost('ssh-remote+host with spaces')).toBeUndefined();
+  });
 });
 
 describe('resolveSshRemoteHost', () => {

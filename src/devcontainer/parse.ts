@@ -19,6 +19,21 @@ const UNSUPPORTED_KEYS: Readonly<Record<string, string>> = {
 
 const FORWARD_PORT_PATTERN = /^(\d+)(?::(\d+))?$/;
 
+/**
+ * Linux account names: letters, digits, ".", "_", "-", not starting with a
+ * digit or dash (see useradd(8)). Everything else — including newlines and
+ * other control characters — is rejected because the name is written into
+ * shell scripts and the user's SSH configuration.
+ */
+const REMOTE_USER_PATTERN = /^[A-Za-z_][A-Za-z0-9._-]{0,31}\$?$/;
+
+/**
+ * Container image references: registry host with optional port, repository
+ * path, tag or digest. Must not start with "-" so it can never be parsed as
+ * a command-line flag by the container CLI.
+ */
+const IMAGE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,127}$/;
+
 export interface ParseDevContainerOptions {
   /**
    * Container machines already provide the image, so a configuration without
@@ -66,8 +81,20 @@ export function parseDevContainer(
     }
     throw new UserError(`"image" is required in ${filePath}.`);
   }
+  if (image && !IMAGE_PATTERN.test(image)) {
+    throw new UserError(
+      `"image" in ${filePath} is not a valid image reference.`,
+      'Use a reference such as "ubuntu:24.04" or "mcr.microsoft.com/devcontainers/node:1-22".',
+    );
+  }
 
   const remoteUser = optionalString(data.remoteUser, 'remoteUser', filePath) ?? 'root';
+  if (!REMOTE_USER_PATTERN.test(remoteUser)) {
+    throw new UserError(
+      `"remoteUser" in ${filePath} must be a Linux user name.`,
+      'Use letters, digits, ".", "_", and "-"; it must not start with a digit or dash.',
+    );
+  }
   const workspaceFolder = normalizeContainerPath(
     optionalString(data.workspaceFolder, 'workspaceFolder', filePath) ??
       `/workspaces/${posix.basename(workspaceRoot) || 'workspace'}`,
@@ -224,6 +251,12 @@ function normalizeContainerPath(value: string, key: string, filePath: string): s
   }
   if (value.includes('\0')) {
     throw new UserError(`"${key}" in ${filePath} must not contain NUL characters.`);
+  }
+  if (value.includes(',')) {
+    throw new UserError(
+      `"${key}" in ${filePath} must not contain commas.`,
+      'Commas separate the fields of the container mount specification.',
+    );
   }
   const normalized = value.replace(/\/+$/, '') || '/';
   const segments = normalized.split('/').filter(Boolean);

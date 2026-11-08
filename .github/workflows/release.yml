@@ -23,9 +23,15 @@ concurrency:
 jobs:
   release:
     name: Release
+    # Only release from CI runs of branch pushes in this repository. A
+    # workflow_run also fires for completed pull_request runs (including
+    # forks); checking out and building head_sha from those would run
+    # untrusted code with a write token.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.fork == false &&
        github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 15
