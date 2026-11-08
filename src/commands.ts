@@ -3,13 +3,23 @@ import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import * as vscode from 'vscode';
 import { buildCreateArgs, lifecycleSteps } from './container/args';
-import { ContainerCli } from './container/cli';
+import { ContainerCli, type ContainerMachineInfo } from './container/cli';
 import { LocalExecutor, SshExecutor, quoteShellArg, type CommandExecutor } from './container/executor';
-import { containerNameForWorkspace, projectId } from './container/naming';
-import { ensureSshd, installAuthorizedKey } from './container/ssh';
+import {
+  containerNameForWorkspace,
+  machineSshHostForWorkspace,
+  projectId,
+} from './container/naming';
+import {
+  ensureSshd,
+  installAuthorizedKey,
+  unlockAccount,
+  type CommandTarget,
+} from './container/ssh';
 import { parseDevContainer } from './devcontainer/parse';
 import type { DevContainerConfig } from './devcontainer/types';
 import { OutputLogger } from './log';
+import { buildPostCreateCheckScript, buildPostCreateMarkScript } from './machine/state';
 import { startSshTunnel, stopSshTunnel } from './remote/tunnel';
 import { resolveSshRemoteHost } from './remote/sshHost';
 import {
@@ -39,6 +49,12 @@ export function registerCommands(
     ),
     vscode.commands.registerCommand('macdevcontainer.rebuildContainer', () =>
       controller.reopen(true),
+    ),
+    vscode.commands.registerCommand('macdevcontainer.reopenInMachine', () =>
+      controller.reopenInMachine(),
+    ),
+    vscode.commands.registerCommand('macdevcontainer.forgetMachine', () =>
+      controller.forgetMachine(),
     ),
     vscode.commands.registerCommand('macdevcontainer.removeContainer', () =>
       controller.remove(),
@@ -165,11 +181,14 @@ class CommandController {
         }
 
         progress.report({ message: 'Configuring SSH…' });
-        await ensureSshd(cli, containerName, this.logger);
+        const target: CommandTarget = {
+          label: `container ${containerName}`,
+          shell: (script, options) => cli.exec(containerName, ['sh', '-c', script], options),
+        };
+        await ensureSshd(target, this.logger);
         const key = await ensureKeyPair(identifier);
         await installAuthorizedKey(
-          cli,
-          containerName,
+          target,
           config.remoteUser,
           key.publicKey,
           identifier,
@@ -230,6 +249,226 @@ class CommandController {
         );
       },
     );
+  }
+
+  /**
+   * Open the workspace in an existing Apple container machine instead of
+   * creating a dedicated dev container. Container machines mount the macOS home
+   * directory at the same path, so the workspace is already available.
+   */
+  async reopenInMachine(): Promise<void> {
+    await this.runWithUi('Opening folder in container machine', async (progress) => {
+      const context = await this.getRunContext();
+      this.assertWorkspaceIsMountable(context);
+
+      const devContainerUri = await this.pickDevContainerFile(context.workspaceUri);
+      const parsed = parseDevContainer(
+        await readWorkspaceText(devContainerUri),
+        uriLabel(devContainerUri),
+        context.workspaceRoot,
+        { requireImage: false },
+      );
+      for (const warning of parsed.warnings) {
+        this.logger.warn(warning);
+      }
+
+      const config = parsed.config;
+      const settings = vscode.workspace.getConfiguration('macdevcontainer');
+      const cli = new ContainerCli({
+        containerPath: settings.get<string>('containerPath', 'container'),
+        executor: context.executor,
+        logger: this.logger,
+      });
+      const autoStart = settings.get<boolean>('autoStartService', true);
+      const identifier = projectId(context.workspaceRoot);
+
+      progress.report({ message: 'Checking the Apple container service…' });
+      await cli.ensureService(autoStart);
+
+      const machine = await this.resolveMachine(cli, settings);
+      if (config.image.length > 0) {
+        this.logger.info(
+          `Ignoring "image" (${config.image}); container machine ${machine.id} provides its own image.`,
+        );
+      }
+      if (
+        config.hostRequirements.cpus !== undefined ||
+        config.hostRequirements.memory !== undefined
+      ) {
+        this.logger.info(
+          `Ignoring "hostRequirements"; change the machine with "container machine set -n ${machine.id}".`,
+        );
+      }
+      this.logger.info(
+        `Container machine ${machine.id} uses ${context.workspaceRoot} as the workspace folder; "workspaceFolder" and "remoteUser" are not used.`,
+      );
+
+      if (machine.homeMount === 'none') {
+        throw new UserError(
+          `The container machine "${machine.id}" does not mount your home directory.`,
+          `Enable it with "container machine set -n ${machine.id} home-mount=rw", then restart the machine.`,
+        );
+      }
+
+      progress.report({ message: `Preparing container machine ${machine.id}…` });
+      const wasRunning = machine.status === 'running';
+
+      // Running a command boots the machine when necessary. Pin the workdir so
+      // macOS privacy never blocks the CLI while it resolves its host cwd.
+      const probe = await cli.machineShell(
+        machine.id,
+        `test -d ${quoteShellArg(context.workspaceRoot)} && cd -- ${quoteShellArg(context.workspaceRoot)} && pwd -P`,
+        { timeoutMs: 5 * 60 * 1000 },
+      );
+      if (probe.code !== 0) {
+        throw new UserError(
+          `The container machine "${machine.id}" cannot access this workspace.`,
+          [
+            outputTail(probe.stderr || probe.stdout),
+            `Container machines expose your macOS home directory (${context.home}) at the same path. Move the project under that directory.`,
+          ]
+            .filter(Boolean)
+            .join('\n\n'),
+        );
+      }
+
+      const resolvedWorkspace = lastLine(probe.stdout) || context.workspaceRoot;
+      const info = (await cli.machineInspect(machine.id)) ?? machine;
+      if (!info.ipAddress) {
+        throw new UserError(
+          `The container machine "${machine.id}" did not report an IP address.`,
+          'Check "container machine inspect" and make sure the machine is running.',
+        );
+      }
+      if (info.homeMount === 'ro') {
+        this.logger.warn(
+          'The container machine mounts your home directory read-only; edits in the workspace will fail.',
+        );
+      }
+
+      const machineUser = info.username;
+      if (!machineUser) {
+        throw new UserError(
+          `The container machine "${machine.id}" did not report a user account.`,
+          'Recreate the machine so it provisions a guest user for your macOS account.',
+        );
+      }
+
+      const target: CommandTarget = {
+        label: `container machine ${machine.id}`,
+        shell: (script, options) => cli.machineShell(machine.id, script, options),
+      };
+
+      const postCreateDone = await this.machinePostCreateDone(cli, machine.id, identifier);
+      if (!postCreateDone) {
+        await this.runMachineLifecycle(
+          cli,
+          machine.id,
+          'postCreateCommand',
+          config.postCreateCommand,
+          resolvedWorkspace,
+          progress,
+        );
+        const marked = await cli.machineShell(
+          machine.id,
+          buildPostCreateMarkScript(identifier),
+          { timeoutMs: 30_000 },
+        );
+        if (marked.code !== 0) {
+          this.logger.warn(
+            `Could not record postCreateCommand state in container machine ${machine.id}: ${outputTail(marked.stderr || marked.stdout)}`,
+          );
+        }
+      }
+
+      if (!wasRunning) {
+        await this.runMachineLifecycle(
+          cli,
+          machine.id,
+          'postStartCommand',
+          config.postStartCommand,
+          resolvedWorkspace,
+          progress,
+        );
+      }
+
+      progress.report({ message: 'Configuring SSH…' });
+      await unlockAccount(target, machineUser);
+      await ensureSshd(target, this.logger);
+      const key = await ensureKeyPair(identifier);
+      await installAuthorizedKey(target, machineUser, key.publicKey, identifier);
+
+      let hostName = info.ipAddress;
+      let port: number | undefined;
+
+      if (context.isRemote) {
+        if (!context.sshHost) {
+          throw new UserError('Could not determine the Remote-SSH host.');
+        }
+        progress.report({ message: 'Opening an SSH tunnel through the remote host…' });
+        const tunnel = await startSshTunnel({
+          projectId: identifier,
+          sshHost: context.sshHost,
+          sshConfigFile: context.sshConfigFile,
+          containerIp: info.ipAddress,
+          logger: this.logger,
+        });
+        hostName = '127.0.0.1';
+        port = tunnel.port;
+      }
+
+      const sshHost = machineSshHostForWorkspace(context.workspaceRoot);
+      const identityFile = key.privateKeyPath.replace(/\\/g, '/');
+      const existingConfig = (await readTextFileIfExists(context.sshConfigFile)) ?? '';
+      await writePrivateFile(
+        context.sshConfigFile,
+        upsertManagedSshBlock(existingConfig, {
+          host: sshHost,
+          hostName,
+          port,
+          user: machineUser,
+          identityFile,
+          forwardPorts: config.forwardPorts,
+        }),
+      );
+
+      progress.report({ message: 'Verifying the SSH connection…' });
+      await waitForTcp(hostName, port ?? 22, context.isRemote ? 20_000 : 30_000);
+      await verifySsh(sshHost, context.sshConfigFile);
+
+      await this.ensureRemoteSshExtension();
+      progress.report({ message: 'Opening the VS Code window…' });
+
+      const encodedPath = resolvedWorkspace
+        .split('/')
+        .map(encodeURIComponent)
+        .join('/');
+      const uri = vscode.Uri.parse(
+        `vscode-remote://ssh-remote+${sshHost}${encodedPath}`,
+      );
+      const openInNewWindow = settings.get<boolean>('openInNewWindow', true);
+      await vscode.commands.executeCommand(
+        'vscode.openFolder',
+        uri,
+        openInNewWindow ? { forceNewWindow: true } : { forceReuseWindow: true },
+      );
+    });
+  }
+
+  /** Remove the managed SSH connection for this workspace's container machine. */
+  async forgetMachine(): Promise<void> {
+    await this.runWithUi('Forgetting container machine connection', async () => {
+      const context = await this.getRunContext();
+      const identifier = projectId(context.workspaceRoot);
+      await stopSshTunnel(identifier);
+      await this.removeSshConfig(
+        context.sshConfigFile,
+        machineSshHostForWorkspace(context.workspaceRoot),
+      );
+      void vscode.window.showInformationMessage(
+        'Removed the container machine SSH connection for this folder. The container machine itself was not changed.',
+      );
+    });
   }
 
   async remove(): Promise<void> {
@@ -322,6 +561,104 @@ class CommandController {
         );
       }
     }
+  }
+
+  private async runMachineLifecycle(
+    cli: ContainerCli,
+    machineName: string,
+    key: string,
+    command: DevContainerConfig['postCreateCommand'],
+    workdir: string,
+    progress: vscode.Progress<{ message?: string; increment?: number }>,
+  ): Promise<void> {
+    for (const step of lifecycleSteps(command, key)) {
+      progress.report({ message: `Running ${step.label}…` });
+      this.logger.info(
+        `Running ${step.label} in container machine ${machineName}: ${step.command}`,
+      );
+      const result = await cli.machineShell(machineName, step.command, {
+        workdir,
+        timeoutMs: 30 * 60 * 1000,
+      });
+      if (result.code !== 0) {
+        throw new UserError(
+          `${step.label} failed with exit code ${result.code} in container machine ${machineName}.`,
+          result.stderr || result.stdout,
+        );
+      }
+    }
+  }
+
+  private async machinePostCreateDone(
+    cli: ContainerCli,
+    machineName: string,
+    identifier: string,
+  ): Promise<boolean> {
+    const result = await cli.machineShell(
+      machineName,
+      buildPostCreateCheckScript(identifier),
+      { timeoutMs: 30_000 },
+    );
+    return result.code === 0;
+  }
+
+  private async resolveMachine(
+    cli: ContainerCli,
+    settings: vscode.WorkspaceConfiguration,
+  ): Promise<ContainerMachineInfo> {
+    const configured = settings.get<string>('machine', '').trim();
+    if (configured.length > 0) {
+      const info = await cli.machineInspect(configured);
+      if (!info) {
+        throw new UserError(
+          `Container machine "${configured}" was not found.`,
+          'Check "container machine ls" or update macdevcontainer.machine.',
+        );
+      }
+      return info;
+    }
+
+    const machines = await cli.machineList();
+    if (machines.length === 0) {
+      throw new UserError(
+        'No container machine was found.',
+        'Create one with "container machine create <image> --name <name>", then try again.',
+      );
+    }
+
+    const preferred = machines.find((machine) => machine.isDefault);
+    if (preferred) {
+      return (await cli.machineInspect(preferred.id)) ?? preferred;
+    }
+
+    const only = machines[0];
+    if (machines.length === 1 && only) {
+      return (await cli.machineInspect(only.id)) ?? only;
+    }
+
+    const picked = await vscode.window.showQuickPick(
+      machines.map((machine) => ({
+        label: machine.id,
+        description: [machine.status, machine.isDefault ? 'default' : undefined, machine.ipAddress]
+          .filter(Boolean)
+          .join(' • '),
+        machineId: machine.id,
+      })),
+      { placeHolder: 'Select a container machine' },
+    );
+    if (!picked) {
+      throw new CancelledError();
+    }
+
+    const info = await cli.machineInspect(picked.machineId);
+    if (info) {
+      return info;
+    }
+    const fallback = machines.find((machine) => machine.id === picked.machineId);
+    if (fallback) {
+      return fallback;
+    }
+    throw new UserError(`Container machine "${picked.machineId}" was not found.`);
   }
 
   private async getRunContext(): Promise<RunContext> {
@@ -453,6 +790,16 @@ class CommandController {
     }
     await writePrivateFile(sshConfigFile, removeManagedSshBlock(existing, containerName));
   }
+}
+
+function lastLine(value: string): string {
+  return (
+    value
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .pop() ?? ''
+  );
 }
 
 function resolveSshConfigFile(): string {

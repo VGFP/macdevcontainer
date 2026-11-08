@@ -20,7 +20,7 @@ export async function verifySsh(host: string, sshConfigFile: string): Promise<vo
 
   if (result.code !== 0) {
     throw new UserError(
-      `Could not connect to the container over SSH as "${host}".`,
+      `Could not connect over SSH as "${host}".`,
       outputTail(result.stderr || result.stdout),
     );
   }

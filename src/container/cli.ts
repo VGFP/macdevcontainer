@@ -1,13 +1,27 @@
+import { homedir } from 'node:os';
 import { UserError, outputTail } from '../util/errors';
 import { type Logger, silentLogger } from '../util/logger';
 import { delay, type RunOptions, type RunResult } from '../util/process';
-import { buildExecArgs, type ExecOptions } from './args';
-import { LocalExecutor, type CommandExecutor } from './executor';
+import { buildExecArgs, buildMachineRunArgs, type ExecOptions, type MachineExecOptions } from './args';
+import { LocalExecutor, quoteShellArg, type CommandExecutor } from './executor';
 
 export interface ContainerInfo {
   id: string;
   state: string;
   ipv4Address?: string;
+}
+
+/** Subset of `container machine inspect` / `container machine ls` output. */
+export interface ContainerMachineInfo {
+  id: string;
+  status: string;
+  ipAddress?: string;
+  isDefault: boolean;
+  username?: string;
+  home?: string;
+  homeMount?: string;
+  cpus?: number;
+  memory?: number;
 }
 
 export interface ContainerCliOptions {
@@ -225,6 +239,110 @@ export class ContainerCli {
       last ? `Last observed state: ${last.state}` : 'The container could not be inspected.',
     );
   }
+
+  async machineList(): Promise<ContainerMachineInfo[]> {
+    const raw = await this.json<unknown[]>(['machine', 'ls', '--format', 'json'], {
+      timeoutMs: 30_000,
+    });
+    return raw
+      .map(toMachineInfo)
+      .filter((info): info is ContainerMachineInfo => info !== undefined);
+  }
+
+  async machineInspect(machineName?: string): Promise<ContainerMachineInfo | undefined> {
+    const args = machineName ? ['machine', 'inspect', machineName] : ['machine', 'inspect'];
+    const result = await this.run(args, { timeoutMs: 30_000 });
+    if (result.code !== 0) {
+      return undefined;
+    }
+    try {
+      const parsed: unknown = JSON.parse(result.stdout || '[]');
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        return undefined;
+      }
+      return toMachineInfo(parsed[0]);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Run a command inside a container machine. This boots the machine when it is
+   * stopped. The host working directory is pinned to the user's home so macOS
+   * privacy never blocks the CLI while it resolves the current directory.
+   */
+  async machineExec(
+    machineName: string,
+    command: readonly string[],
+    options: MachineExecOptions & { timeoutMs?: number; input?: string } = {},
+  ): Promise<RunResult> {
+    const args = buildMachineRunArgs(machineName, command, options);
+    return this.run(args, {
+      cwd: homedir(),
+      timeoutMs: options.timeoutMs,
+      input: options.input,
+    });
+  }
+
+  /**
+   * Run a shell script in a container machine. The script is piped over stdin
+   * because `container machine run` does not preserve spaces inside arguments.
+   */
+  async machineShell(
+    machineName: string,
+    script: string,
+    options: MachineExecOptions & { timeoutMs?: number } = {},
+  ): Promise<RunResult> {
+    const workdir = options.workdir;
+    const command = workdir
+      ? `cd -- ${quoteShellArg(workdir)} || exit 1\n${script}`
+      : script;
+    return this.machineExec(machineName, ['sh', '-s'], {
+      ...options,
+      workdir: '/',
+      interactive: true,
+      input: command,
+    });
+  }
+}
+
+function toMachineInfo(value: unknown): ContainerMachineInfo | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const id = typeof value.id === 'string' ? value.id : undefined;
+  if (!id) {
+    return undefined;
+  }
+
+  const userSetup = isRecord(value.userSetup) ? value.userSetup : {};
+  const info: ContainerMachineInfo = {
+    id,
+    status: typeof value.status === 'string' ? value.status : 'unknown',
+    isDefault: value.default === true,
+  };
+
+  if (typeof value.ipAddress === 'string' && value.ipAddress.length > 0) {
+    info.ipAddress = value.ipAddress.split('/')[0];
+  }
+  if (typeof userSetup.username === 'string' && userSetup.username.length > 0) {
+    info.username = userSetup.username;
+  }
+  if (typeof userSetup.home === 'string' && userSetup.home.length > 0) {
+    info.home = userSetup.home;
+  }
+  if (typeof value.homeMount === 'string' && value.homeMount.length > 0) {
+    info.homeMount = value.homeMount;
+  }
+  if (typeof value.cpus === 'number') {
+    info.cpus = value.cpus;
+  }
+  if (typeof value.memory === 'number') {
+    info.memory = value.memory;
+  }
+
+  return info;
 }
 
 function toContainerInfo(value: unknown): ContainerInfo | undefined {

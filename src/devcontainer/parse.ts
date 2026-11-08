@@ -19,10 +19,19 @@ const UNSUPPORTED_KEYS: Readonly<Record<string, string>> = {
 
 const FORWARD_PORT_PATTERN = /^(\d+)(?::(\d+))?$/;
 
+export interface ParseDevContainerOptions {
+  /**
+   * Container machines already provide the image, so a configuration without
+   * `image` (or with only `build`) is valid when opening in a machine.
+   */
+  requireImage?: boolean;
+}
+
 export function parseDevContainer(
   text: string,
   filePath: string,
   workspaceRoot: string,
+  options: ParseDevContainerOptions = {},
 ): ParsedDevContainer {
   const errors: ParseError[] = [];
   const data: unknown = parse(stripBom(text), errors, {
@@ -49,7 +58,7 @@ export function parseDevContainer(
     .map(([key, reason]) => `"${key}" is not supported yet and is ignored (${reason}).`);
 
   const image = optionalString(data.image, 'image', filePath);
-  if (!image) {
+  if (!image && options.requireImage !== false) {
     if (data.build !== undefined) {
       throw new UserError(
         'Dockerfile-based builds ("build") are not supported yet. Use "image" for now.',
@@ -80,7 +89,7 @@ export function parseDevContainer(
   );
 
   const config: DevContainerConfig = {
-    image,
+    image: image ?? '',
     remoteUser,
     workspaceFolder,
     forwardPorts,

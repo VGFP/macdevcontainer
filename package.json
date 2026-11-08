@@ -44,6 +44,16 @@
         "title": "Rebuild Container"
       },
       {
+        "command": "macdevcontainer.reopenInMachine",
+        "category": "macOS Container",
+        "title": "Reopen Folder in Container Machine"
+      },
+      {
+        "command": "macdevcontainer.forgetMachine",
+        "category": "macOS Container",
+        "title": "Forget Container Machine Connection"
+      },
+      {
         "command": "macdevcontainer.removeContainer",
         "category": "macOS Container",
         "title": "Remove Container"
@@ -66,6 +76,11 @@
           "type": "boolean",
           "default": true,
           "description": "Start the Apple container service automatically when it is not running."
+        },
+        "macdevcontainer.machine": {
+          "type": "string",
+          "default": "",
+          "description": "Container machine to open this folder in. Leave empty to use the default container machine, or to be prompted when several machines exist."
         },
         "macdevcontainer.openInNewWindow": {
           "type": "boolean",
