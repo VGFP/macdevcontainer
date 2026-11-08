@@ -1,3 +1,8 @@
 allowBuilds:
   esbuild: true
   '@vscode/vsce-sign': true
+
+# @vscode/vsce still declares minimatch ^10, but the fix for
+# GHSA-g3hv-75wg-m249 (CVE-2026-118764) only exists in minimatch 11.
+overrides:
+  minimatch: ^11.0.5
