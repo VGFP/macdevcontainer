@@ -278,11 +278,11 @@ Merging to `main` runs CI first. If CI succeeds, the `Release` workflow:
 2. bumps the patch version locally from the latest `vX.Y.Z` tag (or the selected bump for a manual run),
 3. packages the VSIX and computes its SHA-256 digest,
 4. creates a `vX.Y.Z` tag and a GitHub Release with the VSIX and its `.sha256` checksum attached (the digest is also printed in the release notes),
-5. publishes to the VS Code Marketplace when `VSCE_PAT` is configured.
+5. publishes to the VS Code Marketplace using Trusted Publishing (OIDC).
 
 The workflow does not push commits to `main`, so the `main protection` ruleset stays intact. `package.json` on `main` keeps the last committed version; released versions live in tags and GitHub Releases.
 
-Add a repository secret named `VSCE_PAT` (Marketplace → Manage scope) to enable Marketplace publishing. Without it, the GitHub Release is still created and Marketplace publishing is skipped.
+Marketplace publishing uses GitHub Actions OIDC, so no long-lived token is stored. The publisher (`VGFP`) needs a Trusted Publishing policy for repository owner `VGFP`, repository `macdevcontainer`, and workflow `release.yml`. The release job requests `id-token: write` and publishes with `vsce publish --oidc`.
 
 Run **Actions → Release → Run workflow** to release manually and choose `patch`, `minor`, or `major`.
 
