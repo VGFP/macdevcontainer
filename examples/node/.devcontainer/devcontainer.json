@@ -1,0 +1,13 @@
+{
+  "name": "macdevcontainer example",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:4-24-bookworm",
+  "remoteUser": "root",
+  "workspaceFolder": "/workspaces/example",
+  "forwardPorts": [3000],
+  "postCreateCommand": "export DEBIAN_FRONTEND=noninteractive; apt-get update && apt-get install -y openssh-server && mkdir -p /run/sshd",
+  "postStartCommand": "/usr/sbin/sshd",
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "2GB"
+  }
+}

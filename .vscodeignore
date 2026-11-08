@@ -1,0 +1,16 @@
+.vscode/**
+.github/**
+examples/**
+scripts/**
+src/**
+test/**
+out/**
+node_modules/**
+dist/**/*.map
+**/*.ts
+tsconfig.json
+esbuild.mjs
+pnpm-lock.yaml
+pnpm-workspace.yaml
+.gitignore
+*.vsix
