@@ -47,3 +47,13 @@ jobs:
 
       - name: Verify bundled extension
         run: pnpm verify-bundle
+
+      - name: Package extension
+        run: pnpm package
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: macdevcontainer-vsix
+          path: macdevcontainer.vsix
+          if-no-files-found: error
