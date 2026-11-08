@@ -31,33 +31,19 @@
       <stop offset="1" stop-color="#E2E3ED"/>
     </radialGradient>
 
-    <linearGradient id="mdc-top" x1=".15" y1="0" x2=".75" y2="1">
-      <stop offset="0" stop-color="#F8F9FC"/>
-      <stop offset=".5" stop-color="#E3E6F0"/>
-      <stop offset="1" stop-color="#D2D5E4"/>
+    <!-- glass tube: lit from above, settling into shadow at the base -->
+    <linearGradient id="mdc-edge" gradientUnits="userSpaceOnUse" x1="0" y1="86" x2="0" y2="230">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset=".18" stop-color="#F2F3F9"/>
+      <stop offset=".5" stop-color="#CDD0E0"/>
+      <stop offset=".78" stop-color="#989CB3"/>
+      <stop offset="1" stop-color="#757A91"/>
     </linearGradient>
-    <linearGradient id="mdc-left" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#E3E6F1"/>
-      <stop offset=".5" stop-color="#C2C5D7"/>
-      <stop offset="1" stop-color="#AAADC4"/>
-    </linearGradient>
-    <linearGradient id="mdc-right" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#CDD1E1"/>
-      <stop offset=".5" stop-color="#ABAEC5"/>
-      <stop offset="1" stop-color="#8E91AA"/>
-    </linearGradient>
-    <linearGradient id="mdc-top-gloss" x1="0" y1="0" x2=".35" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".7"/>
-      <stop offset=".42" stop-color="#FFFFFF" stop-opacity=".12"/>
+    <linearGradient id="mdc-edge-lit" gradientUnits="userSpaceOnUse" x1="0" y1="86" x2="0" y2="230">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset=".42" stop-color="#FFFFFF" stop-opacity=".55"/>
+      <stop offset=".76" stop-color="#FFFFFF" stop-opacity=".16"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="mdc-side-gloss" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".45"/>
-      <stop offset=".3" stop-color="#FFFFFF" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="mdc-side-shade" x1="0" y1="0" x2="0" y2="1">
-      <stop offset=".6" stop-color="#141828" stop-opacity="0"/>
-      <stop offset="1" stop-color="#141828" stop-opacity=".26"/>
     </linearGradient>
 
     <filter id="mdc-shadow" x="-30%" y="-45%" width="160%" height="200%">
@@ -66,17 +52,12 @@
     <filter id="mdc-glow" x="-150%" y="-150%" width="400%" height="400%">
       <feGaussianBlur stdDeviation="4"/>
     </filter>
-    <filter id="mdc-cube-shadow" x="-40%" y="-40%" width="180%" height="200%">
-      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#141828" flood-opacity=".45"/>
+    <filter id="mdc-edge-shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4.5" flood-color="#141828" flood-opacity=".4"/>
     </filter>
     <filter id="mdc-soft" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="7"/>
+      <feGaussianBlur stdDeviation="6"/>
     </filter>
-
-    <clipPath id="mdc-clip-top"><path d="M128 88 L200 124 L128 160 L56 124 Z"/></clipPath>
-    <clipPath id="mdc-clip-left"><path d="M56 124 L128 160 L128 232 L56 196 Z"/></clipPath>
-    <clipPath id="mdc-clip-right"><path d="M128 160 L200 124 L200 196 L128 232 Z"/></clipPath>
-    <clipPath id="mdc-clip-cube"><path d="M115.48 94.26 Q128 88 140.52 94.26 L187.48 117.74 Q200 124 200.00 138.00 L200.00 182.00 Q200 196 187.48 202.26 L140.52 225.74 Q128 232 115.48 225.74 L68.52 202.26 Q56 196 56.00 182.00 L56.00 138.00 Q56 124 68.52 117.74 Z"/></clipPath>
   </defs>
 
   <!-- frosted grey tile -->
@@ -94,25 +75,20 @@
   <circle cx="186" cy="50" r="17" fill="#FFFFFF" opacity=".28" filter="url(#mdc-glow)"/>
   <circle cx="186" cy="50" r="12" fill="url(#mdc-dot)"/>
 
-  <!-- the dev container, as a 3D glass box with rounded glass edges -->
-  <ellipse cx="128" cy="238" rx="60" ry="10" fill="#141828" opacity=".38" filter="url(#mdc-soft)"/>
-  <g filter="url(#mdc-cube-shadow)" clip-path="url(#mdc-clip-cube)">
-    <path d="M128 160 L200 124 L200 196 L128 232 Z" fill="url(#mdc-right)"/>
-    <path d="M56 124 L128 160 L128 232 L56 196 Z" fill="url(#mdc-left)"/>
-    <path d="M128 88 L200 124 L128 160 L56 124 Z" fill="url(#mdc-top)"/>
-    <path d="M56 124 L128 160 L128 232 L56 196 Z" fill="url(#mdc-side-gloss)" clip-path="url(#mdc-clip-left)"/>
-    <path d="M128 160 L200 124 L200 196 L128 232 Z" fill="url(#mdc-side-gloss)" clip-path="url(#mdc-clip-right)"/>
-    <path d="M56 124 L128 160 L128 232 L56 196 Z" fill="url(#mdc-side-shade)" clip-path="url(#mdc-clip-left)"/>
-    <path d="M128 160 L200 124 L200 196 L128 232 Z" fill="url(#mdc-side-shade)" clip-path="url(#mdc-clip-right)"/>
-    <path d="M128 88 L200 124 L128 160 L56 124 Z" fill="url(#mdc-top-gloss)" clip-path="url(#mdc-clip-top)"/>
+  <!-- the dev container: a hollow glass frame, true isometric proportions -->
+  <ellipse cx="128" cy="242" rx="50" ry="8"
+           fill="#141828" opacity=".3" filter="url(#mdc-soft)"/>
 
-    <!-- inner glass creases -->
-    <path d="M56 124 L128 160 L200 124 M128 160 L128 232"
-          fill="none" stroke="#FFFFFF" stroke-opacity=".58" stroke-width="2.4"
+  <g filter="url(#mdc-edge-shadow)">
+    <path d="M69.54 124.25 L128 158 L186.46 124.25 M128 158 L128 225.5" fill="none" stroke="url(#mdc-edge)" stroke-width="9"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M112.41 95 Q128 86 143.59 95 L174.77 113 Q190.35 122 190.35 140 L190.35 176 Q190.35 194 174.77 203 L143.59 221 Q128 230 112.41 221 L81.23 203 Q65.65 194 65.65 176 L65.65 140 Q65.65 122 81.23 113 Z" fill="none" stroke="url(#mdc-edge)" stroke-width="9"
           stroke-linejoin="round" stroke-linecap="round"/>
   </g>
 
-  <!-- rounded outer bevel -->
-  <path d="M115.48 94.26 Q128 88 140.52 94.26 L187.48 117.74 Q200 124 200.00 138.00 L200.00 182.00 Q200 196 187.48 202.26 L140.52 225.74 Q128 232 115.48 225.74 L68.52 202.26 Q56 196 56.00 182.00 L56.00 138.00 Q56 124 68.52 117.74 Z" fill="none" stroke="#FFFFFF" stroke-opacity=".82" stroke-width="2.8"
+  <!-- inner specular core -->
+  <path d="M69.54 124.25 L128 158 L186.46 124.25 M128 158 L128 225.5" fill="none" stroke="url(#mdc-edge-lit)" stroke-width="3"
+        stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M112.41 95 Q128 86 143.59 95 L174.77 113 Q190.35 122 190.35 140 L190.35 176 Q190.35 194 174.77 203 L143.59 221 Q128 230 112.41 221 L81.23 203 Q65.65 194 65.65 176 L65.65 140 Q65.65 122 81.23 113 Z" fill="none" stroke="url(#mdc-edge-lit)" stroke-width="3.2"
         stroke-linejoin="round" stroke-linecap="round"/>
 </svg>
