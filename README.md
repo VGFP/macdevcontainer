@@ -257,6 +257,26 @@ Debugging tips:
 
 ---
 
+## Releasing
+
+`pnpm package` builds `macdevcontainer.vsix` locally. CI also packages the extension and uploads the VSIX as an artifact on every push and pull request.
+
+Merging to `main` runs CI first. If CI succeeds, the `Release` workflow:
+
+1. checks out the commit that passed CI,
+2. bumps the patch version locally from the latest `vX.Y.Z` tag (or the selected bump for a manual run),
+3. packages the VSIX,
+4. creates a `vX.Y.Z` tag and a GitHub Release with the VSIX attached,
+5. publishes to the VS Code Marketplace when `VSCE_PAT` is configured.
+
+The workflow does not push commits to `main`, so the `main protection` ruleset stays intact. `package.json` on `main` keeps the last committed version; released versions live in tags and GitHub Releases.
+
+Add a repository secret named `VSCE_PAT` (Marketplace → Manage scope) to enable Marketplace publishing. Without it, the GitHub Release is still created and Marketplace publishing is skipped.
+
+Run **Actions → Release → Run workflow** to release manually and choose `patch`, `minor`, or `major`.
+
+---
+
 ## Contributing
 
 Issues and pull requests are welcome. Please include:
