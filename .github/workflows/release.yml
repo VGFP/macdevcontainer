@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: release-main
@@ -35,8 +36,6 @@ jobs:
        github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      VSCE_PAT: ${{ secrets.VSCE_PAT }}
     steps:
       - name: Check out the CI commit
         uses: actions/checkout@v7
@@ -136,5 +135,5 @@ jobs:
             --generate-notes
 
       - name: Publish to VS Code Marketplace
-        if: steps.existing.outputs.skip != 'true' && env.VSCE_PAT != ''
-        run: pnpm exec vsce publish --packagePath macdevcontainer.vsix -p "$VSCE_PAT"
+        if: steps.existing.outputs.skip != 'true'
+        run: pnpm exec vsce publish --packagePath macdevcontainer.vsix --oidc
