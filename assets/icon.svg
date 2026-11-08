@@ -43,6 +43,9 @@
       <stop offset="1" stop-color="#FFFFFF" stop-opacity=".4"/>
     </linearGradient>
 
+    <filter id="mdc-row-shadow" x="-30%" y="-45%" width="160%" height="200%">
+      <feDropShadow dx="0" dy="4.5" stdDeviation="5" flood-color="#1A1E30" flood-opacity=".36"/>
+    </filter>
     <filter id="mdc-glow" x="-150%" y="-150%" width="400%" height="400%">
       <feGaussianBlur stdDeviation="5"/>
     </filter>
@@ -55,7 +58,9 @@
         fill="none" stroke="#FFFFFF" stroke-opacity=".26" stroke-width="3"/>
 
   <!-- container row, same width and padding as the reference -->
-  <rect x="37" y="38" width="182" height="53" rx="26.5" fill="url(#mdc-glass)"/>
+  <g filter="url(#mdc-row-shadow)">
+    <rect x="37" y="38" width="182" height="53" rx="26.5" fill="url(#mdc-glass)"/>
+  </g>
   <rect x="38.5" y="39.5" width="179" height="50" rx="25"
         fill="none" stroke="url(#mdc-rim)" stroke-width="2.4"/>
   <circle cx="191" cy="64.5" r="21.5" fill="#FFFFFF" opacity=".26" filter="url(#mdc-glow)"/>
