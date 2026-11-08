@@ -57,7 +57,7 @@ No extension installation is required on the remote host. Both `ssh` and `ssh-ke
 |---|---|
 | macOS | 26+ (Apple Silicon) |
 | Apple `container` CLI | 1.7.1+ (`container --version`) |
-| VS Code | 1.95+ |
+| VS Code | 1.145+ |
 | VS Code extension | **Remote - SSH** (`ms-vscode-remote.remote-ssh`) |
 | `sshd` in the image | installed automatically if missing (apt, apk, dnf, yum, pacman), or via `postCreateCommand` |
 
